@@ -42,7 +42,7 @@ class FrameCap(threading.Thread): # defining a thread class
         self.initial_.set()                              # Waking up the the main thread by initialization 
         self.flag = True                                 # The flag to insures it woke up from the flag not from the time out
         if not self.success:                             # going out of the thread if there is no camera
-            print ('No Camera is detected')
+            print ('No Camera is detected  ')
             vid_cap.release()
             return
 	#adding one more dimension to the main frames matrix to concatinate the next frames onto
@@ -90,7 +90,7 @@ def test():
             frame_ = cv2.flip(frame_,0)         # The rest of code here(Any kind of processing is here)
             cv2.imshow('frame',frame_)          # The rest of code here(Any kind of processing is here)
             cv2.waitKey(30)
-        print ('  No More frames to capture')   # Printing there is no frames when breaking out of the loop
+        print ('No More frames to capture  ')   # Printing there is no frames when breaking out of the loop
         frame.key = 0                           # breaking the capture thread
         frame.join()                            # waiting for the capture thread to terminate
         cv2.destroyAllWindows()                 # clearing the windows
