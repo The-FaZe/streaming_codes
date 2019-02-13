@@ -45,8 +45,10 @@ class FrameCap(threading.Thread): # defining a thread class
             print ('No Camera is detected')
             vid_cap.release()
             return
-        self.frames = np.expand_dims(self.frames, axis=0)#adding one more dimension to the main frames matrix to concatinate the next frames onto
-        while (self.key):		                 #Capturing loop designed to break, If the key is set to 0 or there's an error accessing the camera
+	#adding one more dimension to the main frames matrix to concatinate the next frames onto
+        self.frames = np.expand_dims(self.frames, axis=0)
+	#Capturing loop designed to break, If the key is set to 0 or there's an error accessing the camera
+        while (self.key):		                 
             i = i[1:]					 #Droping the first index of the Decision array
             #If the decision array is an empty array it will copy the saved deicision array and shuffle its elements
             if not i.size:
@@ -56,7 +58,7 @@ class FrameCap(threading.Thread): # defining a thread class
             if not self.success:                         # Closing the camera after breaking the loop if there is no frames to capture
                 vid_cap.release()			 
                 return
-            if i[0]:					 # Taking a decision to drop or concatente it onto the frames name of the class "FrameCap"
+            if i[0]:		# Taking a decision to drop or concatente it onto the frames name of the class "FrameCap"
                 self.frames = np.concatenate((self.frames, np.expand_dims(frame_, axis=0)), axis=0)
                 self.event.set()
         vid_cap.release()				 # Closing the camera after breaking the loop
