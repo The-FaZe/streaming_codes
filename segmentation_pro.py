@@ -53,7 +53,6 @@ class FrameCap(mp.Process):       # defining a thread class
                 i = k.copy()
                 np.random.shuffle(i)
             success, frame_ = vid_cap.read()	    # Capturing and decoding the next frame
-            print(self.key.value)
         vid_cap.release()				 # Closing the camera after breaking the loop
         print('The secound process is terminated ')
         self.frames.put(True)
