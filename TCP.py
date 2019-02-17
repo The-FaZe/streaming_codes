@@ -36,8 +36,8 @@ def send_frame(connection,img):
     return
 
 def recv_frame(connection):
-    connection.settimeout(2)
-    msglen = connection.recv(60)
+    msglen = connection.recv(4)
+    print(len(msglen))
     msglen = unpack(">I", msglen)[0]
     rcvdlen = 0
     frame = [];
