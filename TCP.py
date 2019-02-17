@@ -21,6 +21,7 @@ def set_client(ip,port):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_address = (ip,6666)
     client.connect(server_address)
+    print('The connection has been started')
     return client
 
 def send_frame(connection,img):
@@ -53,6 +54,3 @@ def decode_frame(frame):
     frame = np.frombuffer(frame,dtype='uint8')
     frame = cv2.imdecode(frame,1)
     return frame
-    
-
-    
