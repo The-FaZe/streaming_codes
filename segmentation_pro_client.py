@@ -44,7 +44,7 @@ class Frames_rcv(mp.Process):       # defining a thread class
 #For testing
 def main(fun,args=()):
     try:
-        client = TCP.set_client('192.168.1.112',6666)
+        client = TCP.set_client('197.32.159.150', 6000)
         frame = Frames_rcv(client)    # setting up the object
         frame.start()                 # initializing the capture thread
         while frame.is_alive():                    # Real time processing loop
