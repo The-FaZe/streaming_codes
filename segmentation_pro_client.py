@@ -10,26 +10,24 @@ import cv2
 #The presented code is capped at the actual FPS of the camera.
 class Frames_rcv(mp.Process):       # defining a thread class
 
-    def __init__(self, ip, port):
+    def __init__(self,client):
         self.frames = mp.Queue(0)          # Allocating a name for the captured frames
         self.key  = mp.Value('b',True)     # Key to kill the process in the 2nd thread(parallel thread to the main) using the main thread.
         mp.Process.__init__(self)
-        self.ip = ip                       #The FPS of the camera
-        self.port = port                   #The FPS of the output
+        self.client = client
 
     # A module to select and save the selected frames into an array (runs in a parallel thread to the main thread of the main code)
     def run(self):
         try:
-            client = TCP.set_client(self.ip,self.port)
             #Capturing loop designed to break, If the key is set to 0 or there's an error accessing the camera:
             while (self.key.value):
-                frame_,_ = TCP.recv_frame(client)
+                frame_,_ = TCP.recv_frame(self.client)
                 self.frames.put(frame_)				 # Closing the camera after breaking the loop
             print('The secound process is terminated ')
-            client.close()
+            self.client.close()
         except (KeyboardInterrupt,IOError)as e:
             print('The secound process is terminated ')
-            client.close()
+            self.client.close()
         return
     
     #This module is to fetch first frame which saved in the memory then erasing it(run in the main thread with the main code)
@@ -45,13 +43,10 @@ class Frames_rcv(mp.Process):       # defining a thread class
     
 #For testing
 def main(fun,args=()):
-    frame = Frames_rcv('192.168.1.112',6666)    # setting up the object
-    frame.start()# initializing the capture thread
-    sleep(3)
     try:
-        while frame.frames.empty():
-            frame_ = frame.get_frame(False)
-        
+        client = TCP.set_client('192.168.1.112',6666)
+        frame = Frames_rcv(client)    # setting up the object
+        frame.start()                 # initializing the capture thread
         while frame.is_alive():                    # Real time processing loop
             frame_ = frame.get_frame(False)     # Getting a fraf in form of BGR
             fun(frame_)   
@@ -60,10 +55,8 @@ def main(fun,args=()):
         frame.join()                            # waiting for the capture thread to terminate
         print('The programe is exiting ')
         cv2.destroyAllWindows()                 # clearing the windows
-        sleep(2)
     except (KeyboardInterrupt,IOError)as e:
         frame.key.value = False                 # breaking the capture thread
-        sleep(0.5)
         frame.terminate()
         frame.join()                            # waiting for the capture thread to terminate
         frame.frames.close()
@@ -76,4 +69,3 @@ def test(frame_,):
 #Main For Testing
 if __name__ == '__main__':
     main(test)
-
