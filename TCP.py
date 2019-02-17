@@ -19,7 +19,7 @@ def set_server(port):
 
 def set_client(ip,port):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_address = (ip,6666)
+    server_address = (ip,port)
     client.connect(server_address)
     print('The connection has been started')
     return client
