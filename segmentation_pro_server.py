@@ -35,29 +35,33 @@ class FrameCap(mp.Process):       # defining a thread class
 
     # A module to select and save the selected frames into an array (runs in a parallel thread to the main thread of the main code)
     def run(self):
-        i = self.decision()                              #Getting Index array (decision array)
-        k = i.copy() 				         #Back up this array
-        vid_cap = cv2.VideoCapture(self.id)		 #Creating the object vid_cap for the camera capturing
-        success, frame_ = vid_cap.read()	         #capturing and selecting the first frame to record
-        if not success:                                  # going out of the thread if there is no camera
-            print ('No Camera is detected ')
-            vid_cap.release()
+        try :
+            i = self.decision()                              #Getting Index array (decision array)
+            k = i.copy() 				         #Back up this array
+            vid_cap = cv2.VideoCapture(self.id)		 #Creating the object vid_cap for the camera capturing
+            success, frame_ = vid_cap.read()	         #capturing and selecting the first frame to record
+            if not success:                                  # going out of the thread if there is no camera
+                print ('No Camera is detected ')
+                vid_cap.release()
+                self.frames.put(True)
+                return
+            #Capturing loop designed to break, If the key is set to 0 or there's an error accessing the camera
+            while (self.key.value and success):
+                if i[0]:		        # Taking a decision to drop or concatente it onto the frames name of the class "FrameCap"
+                    self.frames.put(frame_)
+                i = i[1:]					 #Droping the first index of the Decision array(consuming the array)
+                #If the decision array is an empty array it will copy the saved deicision array and shuffle its elements
+                if not i.size:
+                    i = k.copy()
+                    np.random.shuffle(i)
+                success, frame_ = vid_cap.read()	    # Capturing and decoding the next frame
+            vid_cap.release()				 # Closing the camera after breaking the loop
+            print('The secound process is terminated ')
             self.frames.put(True)
-            return
-        #Capturing loop designed to break, If the key is set to 0 or there's an error accessing the camera
-        while (self.key.value and success):
-            if i[0]:		        # Taking a decision to drop or concatente it onto the frames name of the class "FrameCap"
-                self.frames.put(frame_)
-            i = i[1:]					 #Droping the first index of the Decision array(consuming the array)
-            #If the decision array is an empty array it will copy the saved deicision array and shuffle its elements
-            if not i.size:
-                i = k.copy()
-                np.random.shuffle(i)
-            success, frame_ = vid_cap.read()	    # Capturing and decoding the next frame
-        vid_cap.release()				 # Closing the camera after breaking the loop
-        print('The secound process is terminated ')
-        self.frames.put(True)
-        self.join()
+        except(KeyboardInterrupt, IOError)as e:
+            vid_cap.release()
+            print('The secound process is terminated ')
+            self.frames.put(True)
         return
     
     #This module is to fetch first frame which saved in the memory then erasing it(run in the main thread with the main code)
@@ -101,4 +105,4 @@ def main(fun,fun_intial,args_intial=()):
 
 #Main For Testing
 if __name__ == '__main__':
-    main(TCP.send_frame,TCP.set_server,6666)
+    main(TCP.send_frame,TCP.set_server,6000)
