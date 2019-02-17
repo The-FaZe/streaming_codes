@@ -57,6 +57,7 @@ class FrameCap(mp.Process):       # defining a thread class
         vid_cap.release()				 # Closing the camera after breaking the loop
         print('The secound process is terminated ')
         self.frames.put(True)
+        self.join()
         return
     
     #This module is to fetch first frame which saved in the memory then erasing it(run in the main thread with the main code)
@@ -74,7 +75,7 @@ def main(fun,fun_intial,args_intial=()):
     frame = FrameCap(8,6,0)                     # setting up the object
     frame.start()                               # initializing the capture thread
     try:
-        while frame.is_alive():                    # Real time processing loop
+        while (frame.is_alive()):                    # Real time processing loop
             frame_ = frame.get_frame(False)     # Getting a fraf in form of BGR
             if frame_ is True:
                 break
@@ -88,15 +89,15 @@ def main(fun,fun_intial,args_intial=()):
         print('The programe is exiting ')
         cv2.destroyAllWindows()                 # clearing the windows
         sleep(2)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, IOError)as e :
         frame.key.value = False                 # breaking the capture thread
         conn.close()
         sleep(0.5)
         frame.terminate()
         frame.join()                            # waiting for the capture thread to terminate
         frame.frames.close()
-        cv2.destroyAllWindows()                 # clearing the windows
         print('The program has been terminated ')
+        cv2.destroyAllWindows()                 # clearing the windows
 
 #Main For Testing
 if __name__ == '__main__':
