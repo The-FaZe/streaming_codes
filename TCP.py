@@ -1,5 +1,4 @@
 import socket
-import portpicker
 from time import sleep
 import cv2
 from struct import unpack,pack
@@ -36,6 +35,7 @@ def send_frame(connection,img):
     return
 
 def recv_frame(connection):
+    connection.settimeout(2)
     msglen = connection.recv(4)
     msglen = unpack(">I", msglen)[0]
     rcvdlen = 0
@@ -53,4 +53,6 @@ def decode_frame(frame):
     frame = np.frombuffer(frame,dtype='uint8')
     frame = cv2.imdecode(frame,1)
     return frame
+    
+
     
