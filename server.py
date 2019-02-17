@@ -2,7 +2,7 @@ import socket
 from time import sleep
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 ip =socket.gethostbyname(socket.gethostname())
-port = 6666
+port = 6000
 server_address = (ip,port)
 sock.bind(server_address)
 print ('starting up on',server_address[0],':',server_address[1])
