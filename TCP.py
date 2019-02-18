@@ -29,16 +29,16 @@ def send_frame(connection,img):
     _ ,enc_img = cv2.imencode('.jpg',img,encode_param)
     buff = len(enc_img)
     print(buff)
-    buff = pack('>L',buff)
+    buff = pack('>Q',buff)
     enc_img1 = enc_img.tostring()
     connection.send(buff)
     connection.sendall(enc_img1)
     return
 
 def recv_frame(connection):
-    msglen = connection.recv(4)
+    msglen = connection.recv(8)
     print(len(msglen))
-    msglen = unpack(">L", msglen)[0]
+    msglen = unpack(">Q", msglen)[0]
     rcvdlen = 0
     frame = [];
     while(rcvdlen < msglen):
