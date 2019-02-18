@@ -70,11 +70,11 @@ def webcam(ip,port,weight_dir,test_crops,ClassIndDir,arch = 'BNInception'):
   nn_output = torch.tensor(np.zeros((1, 101)), dtype=torch.float32).cuda()
   frame_count = 0
   try:
-    frame = Frames_rcv(ip,port)
-    frame.start()
-    while frame.is_alive():
+    frameobj = Frames_rcv(ip,port)
+    frameobj.start()
+    while frameobj.is_alive():
         # read each frame and prepare it for feedforward in nn (resize and type)
-        frame_ = frame.get_frame()
+        frame = frameobj.get_frame()
         frame = Image.fromarray(frame)
         frame = transform(frame).view(1, 3, 224, 224).cuda()
         #print(frame.size())
@@ -106,10 +106,10 @@ def webcam(ip,port,weight_dir,test_crops,ClassIndDir,arch = 'BNInception'):
             break
 
     # When everything done, release the capture
-    frame.exit()
+    frameobj.exit()
     cv2.destroyAllWindows()
   except(KeyboardInterrupt,IOError,Exception) as e:
-    frame.exit()
+    frameobj.exit()
     cv2.destroyAllWindows()
     
     
