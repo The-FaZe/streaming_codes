@@ -3,12 +3,12 @@ import torch
 import torchvision
 import cv2
 import torchvision.transforms as Transforms
+from TCP import Frames_rcv
 
 from Modified_CNN import TSN_model
 from transforms import *
 
 os.chdir(r'C:\Driver E\Jimy\Machine_Learning\Graduation_Project\webcam_interface\Trial\real-time-action-recognition')
-
 
 
 def IdxtoClass(ClassIndDir):
@@ -25,7 +25,7 @@ def IdxtoClass(ClassIndDir):
           
   return action_label
 
-def webcam(weight_dir,test_crops,ClassIndDir,arch = 'BNInception'):
+def webcam(ip,port,weight_dir,test_crops,ClassIndDir,arch = 'BNInception'):
   
   #Perpare the model
   model = TSN_model(num_classes=101, num_segments=1, modality='RGB',
@@ -66,51 +66,51 @@ def webcam(weight_dir,test_crops,ClassIndDir,arch = 'BNInception'):
                       GroupNormalize(model.input_mean, model.input_std),])
   
   # Start looping on frames received from webcam
-  vs = cv2.VideoCapture(0)              
   softmax = torch.nn.Softmax()
   nn_output = torch.tensor(np.zeros((1, 101)), dtype=torch.float32).cuda()
   frame_count = 0
-  
-  while True:
-      # read each frame and prepare it for feedforward in nn (resize and type)
-      ret, orig_frame = vs.read()
-      
-      if ret is True:
-          frame = cv2.cvtColor(orig_frame, cv2.COLOR_BGR2RGB)
-      else:
-          break
-      
-      frame = Image.fromarray(frame)
-      frame = transform(frame).view(1, 3, 224, 224).cuda()
-      #print(frame.size())
-      
-      # feed the frame to the neural network  
-      nn_output += model(frame)
+  try:
+    frame = Frames_rcv(ip,port)
+    frame.start()
+    while frame.is_alive():
+        # read each frame and prepare it for feedforward in nn (resize and type)
+        frame_ = frame.get_frame()
+        frame = Image.fromarray(frame)
+        frame = transform(frame).view(1, 3, 224, 224).cuda()
+        #print(frame.size())
 
-      # vote for class with 25 consecutive frames
-      if frame_count % 50 == 0:
-          nn_output = softmax(nn_output)
-          nn_output = nn_output.data.cpu().numpy()
-          preds = nn_output.argsort()[0][-5:][::-1]
-          pred_classes = [(idx_to_class[str(pred+1)], nn_output[0, pred]) for pred in preds]
+        # feed the frame to the neural network  
+        nn_output += model(frame)
 
-          # reset the process
-          nn_output = torch.tensor(np.zeros((1, 101)), dtype=torch.float32).cuda()
-      
-      # Display the resulting frame and the classified action
-      font = cv2.FONT_HERSHEY_SIMPLEX
-      y0, dy = 300, 40
-      for i in range(5):
-          y = y0 + i * dy
-          cv2.putText(orig_frame, '{} - {:.2f}'.format(pred_classes[i][0], pred_classes[i][1]),
-                      (5, y), font, 1, (0, 0, 255), 2)
-      
-      cv2.imshow('Webcam', orig_frame)
-      frame_count += 1
-      if cv2.waitKey(1) & 0xFF == ord('q'):
-          break
-      
-  # When everything done, release the capture
-  vs.release()
-  cv2.destroyAllWindows()
+        # vote for class with 25 consecutive frames
+        if frame_count % 50 == 0:
+            nn_output = softmax(nn_output)
+            nn_output = nn_output.data.cpu().numpy()
+            preds = nn_output.argsort()[0][-5:][::-1]
+            pred_classes = [(idx_to_class[str(pred+1)], nn_output[0, pred]) for pred in preds]
+
+            # reset the process
+            nn_output = torch.tensor(np.zeros((1, 101)), dtype=torch.float32).cuda()
+
+        # Display the resulting frame and the classified action
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        y0, dy = 300, 40
+        for i in range(5):
+            y = y0 + i * dy
+            cv2.putText(orig_frame, '{} - {:.2f}'.format(pred_classes[i][0], pred_classes[i][1]),
+                        (5, y), font, 1, (0, 0, 255), 2)
+
+        cv2.imshow('Webcam', orig_frame)
+        frame_count += 1
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # When everything done, release the capture
+    frame.exit()
+    cv2.destroyAllWindows()
+  except(KeyboardInterrupt,IOError,Exception) as e:
+    frame.exit()
+    cv2.destroyAllWindows()
+    
+    
 
