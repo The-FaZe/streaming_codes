@@ -90,6 +90,7 @@ class Frames_rcv(mp.Process):
     def exit(self):
         self.key.value = False                 # breaking the capture thread
         self.terminate()
-        self.join()                            # waiting for the capture thread to terminate
         self.frames.close()
+        self.frames.join()
+        self.join()                            # waiting for the capture thread to terminate
         print('The program has been terminated ')
