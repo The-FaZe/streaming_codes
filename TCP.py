@@ -92,5 +92,4 @@ class Frames_rcv(mp.Process):
         self.terminate()
         self.join()                            # waiting for the capture thread to terminate
         self.frames.close()
-        cv2.destroyAllWindows()                 # clearing the windows
         print('The program has been terminated ')
