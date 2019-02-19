@@ -1,9 +1,10 @@
 import socket
-from time import sleep
+from time import sleep,time
 import cv2
 from struct import unpack,pack
 import numpy as np
 import multiprocessing as mp
+
 
 def set_server(port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -25,8 +26,8 @@ def set_client(ip,port):
     print('The connection has been started')
     return client
 
-def send_frame(connection,img):
-    encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
+def send_frame(connection,img,Quality=90):
+    encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),Quality]
     _ ,enc_img = cv2.imencode('.jpg',img,encode_param)
     buff = len(enc_img)
     print(buff)
@@ -40,9 +41,11 @@ def recv_frame(connection):
     msglen = connection.recv(8)
     print(len(msglen))
     msglen = unpack(">Q", msglen)[0]
+    chunklen = []
     rcvdlen = 0
     frame = [];
     while(rcvdlen < msglen):
+        x = time()
         chunk = connection.recv(min(msglen - rcvdlen, 2048))
         if chunk == '':
             raise RuntimeError("socket connection broken")
@@ -60,18 +63,17 @@ class Frames_rcv(mp.Process):
 
     def __init__(self,ip,port):
         self.client = TCP.set_client(ip, port)
-        self.frames = mp.Queue(0)          
+        self.frames = mp.Queue(0)
         self.key  = mp.Value('b',True)     
         mp.Process.__init__(self)
 
     def run(self):
         try:
             while (self.key.value):
+                msglen = []
                 x = time()
-                frame_,_ = TCP.recv_frame(self.client)
-                self.frames.put(frame_)			 # Closing the camera after breaking the loop
-                y = time()
-                print(1/(x-y),'fps')
+                frame_,msglen = TCP.recv_frame(self.client)
+                self.frames.put([frame_,msglen,time()-y])	    # Closing the camera after breaking the loop
             print('The secound process is terminated ')
             self.client.close()
         except (KeyboardInterrupt,IOError)as e:
@@ -80,7 +82,8 @@ class Frames_rcv(mp.Process):
         return
     
     def get_frame(self,rgb = True):
-        frame_ = self.frames.get(True,30)
+        [frame_,msglen,spf] = self.frames.get(True,30)
+        print(msglen  ,  spf)
         frame_ = TCP.decode_frame(frame_)
         if rgb:
             b,g,r  = cv2.split(frame_)                  # get b,g,r
