@@ -62,7 +62,7 @@ def decode_frame(frame):
 class Frames_rcv(mp.Process):       
 
     def __init__(self,ip,port):
-        self.client = TCP.set_client(ip, port)
+        self.client = set_client(ip, port)
         self.frames = mp.Queue(0)
         self.key  = mp.Value('b',True)     
         mp.Process.__init__(self)
@@ -72,8 +72,8 @@ class Frames_rcv(mp.Process):
             while (self.key.value):
                 msglen = []
                 x = time()
-                frame_,msglen = TCP.recv_frame(self.client)
-                self.frames.put([frame_,msglen,time()-y])	    # Closing the camera after breaking the loop
+                frame_,msglen = recv_frame(self.client)
+                self.frames.put([frame_,msglen,time()-x])	    # Closing the camera after breaking the loop
             print('The secound process is terminated ')
             self.client.close()
         except (KeyboardInterrupt,IOError)as e:
@@ -84,7 +84,7 @@ class Frames_rcv(mp.Process):
     def get_frame(self,rgb = True):
         [frame_,msglen,spf] = self.frames.get(True,30)
         print(msglen  ,  spf)
-        frame_ = TCP.decode_frame(frame_)
+        frame_ = decode_frame(frame_)
         if rgb:
             b,g,r  = cv2.split(frame_)                  # get b,g,r
             frame_ = cv2.merge([r,g,b])       	        # switch it to rgb
@@ -93,8 +93,8 @@ class Frames_rcv(mp.Process):
     
     def exit(self):
         self.key.value = False                 # breaking the capture thread
-        self.terminate()
         self.frames.close()
         self.frames.join()
+        self.terminate()
         self.join()                            # waiting for the capture thread to terminate
         print('The program has been terminated ')
