@@ -1,50 +1,13 @@
 import numpy as np
 import multiprocessing as mp
 from time import sleep
-import TCP 
+from TCP import Frames_rcv
 import cv2
 
-#the presented code is a mutithread class consists of 2 modules 
-#	The first module is run on a parallel thread to the main thread and tasked to select the snippets in a random way 
-#	then saving the selected snippets into the memory.
-#The presented code is capped at the actual FPS of the camera.
-class Frames_rcv(mp.Process):       # defining a thread class
-
-    def __init__(self,client):
-        self.frames = mp.Queue(0)          # Allocating a name for the captured frames
-        self.key  = mp.Value('b',True)     # Key to kill the process in the 2nd thread(parallel thread to the main) using the main thread.
-        mp.Process.__init__(self)
-        self.client = client
-
-    # A module to select and save the selected frames into an array (runs in a parallel thread to the main thread of the main code)
-    def run(self):
-        try:
-            #Capturing loop designed to break, If the key is set to 0 or there's an error accessing the camera:
-            while (self.key.value):
-                frame_,_ = TCP.recv_frame(self.client)
-                self.frames.put(frame_)				 # Closing the camera after breaking the loop
-            print('The secound process is terminated ')
-            self.client.close()
-        except (KeyboardInterrupt,IOError)as e:
-            print('The secound process is terminated ')
-            self.client.close()
-        return
-    
-    #This module is to fetch first frame which saved in the memory then erasing it(run in the main thread with the main code)
-    def get_frame(self,rgb = True):
-        frame_ = self.frames.get(True,30)
-        frame_ = TCP.decode_frame(frame_)
-        if rgb:
-            b,g,r  = cv2.split(frame_)                  # get b,g,r
-            frame_ = cv2.merge([r,g,b])       	        # switch it to rgb
-        return frame_ 					#Returning the frame as an output
-        
-
-    
 #For testing
 def main(fun,args=()):
     try:
-        client = TCP.set_client('197.32.159.150', 6000)
+        client = TCP.set_client('192.168.1.112', 6666)
         frame = Frames_rcv(client)    # setting up the object
         frame.start()                 # initializing the capture thread
         while frame.is_alive():                    # Real time processing loop
