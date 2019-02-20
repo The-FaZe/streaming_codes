@@ -14,7 +14,7 @@ class FrameCap(mp.Process):       # defining a thread class
     def __init__(self, fps_old, fps_new, id_):
         self.frames = mp.Queue(0)          # Allocating a name for the captured frames
         self.key  = mp.Value('b',True)     # Key to kill the process in the 2nd thread(parallel thread to the main) using the main thread.
-        mp.Process.__init__(self,daemon=False)
+        mp.Process.__init__(self)
         self.fps_old = fps_old             #The FPS of the camera
         self.fps_new = fps_new             #The FPS of the output
         self.id = id_                      #The ID of the camera
@@ -48,7 +48,7 @@ class FrameCap(mp.Process):       # defining a thread class
             #Capturing loop designed to break, If the key is set to 0 or there's an error accessing the camera
             while (self.key.value and success):
                 if i[0]:		        # Taking a decision to drop or concatente it onto the frames name of the class "FrameCap"
-                    self.frames.put(frame_)
+                    self.frames.put(cv2.resize(frame_,(224,224)))
                 i = i[1:]					 #Droping the first index of the Decision array(consuming the array)
                 #If the decision array is an empty array it will copy the saved deicision array and shuffle its elements
                 if not i.size:
@@ -75,10 +75,11 @@ class FrameCap(mp.Process):       # defining a thread class
     
 #For testing
 def main(fun,fun_intial,args_intial=()):
-    conn=fun_intial(args_intial)
-    frame = FrameCap(8,6,0)                     # setting up the object
-    frame.start()                               # initializing the capture thread
+    # initializing the capture thread
     try:
+        conn=fun_intial(args_intial)
+        frame = FrameCap(1,1,0)                     # setting up the object
+        frame.start()     
         while (frame.is_alive()):                    # Real time processing loop
             frame_ = frame.get_frame(False)     # Getting a fraf in form of BGR
             if frame_ is True:
@@ -92,11 +93,9 @@ def main(fun,fun_intial,args_intial=()):
         frame.join()                            # waiting for the capture thread to terminate
         print('The programe is exiting ')
         cv2.destroyAllWindows()                 # clearing the windows
-        sleep(2)
     except (KeyboardInterrupt, IOError)as e :
         frame.key.value = False                 # breaking the capture thread
         conn.close()
-        sleep(0.5)
         frame.terminate()
         frame.join()                            # waiting for the capture thread to terminate
         frame.frames.close()
