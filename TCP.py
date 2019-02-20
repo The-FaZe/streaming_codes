@@ -122,12 +122,12 @@ class Frames_rcv(mp.Process):
                 msglen_sum += msglen
                 self.frames.put([frame_,msglen,time()-x])	    # Closing the camera after breaking the loop
             print('The secound process is terminated \n',
-                  'The total average Rate is ',msglen_sum/((time-y)*1000),'KB')
+                  'The total average Rate is ',msglen_sum/((time-y)*1000),'KB/s')
             self.client.close()
         except ( KeyboardInterrupt,IOError,OSError)as e:
             self.frames.close()
             print('The secound process is terminated \n',
-                  'The total average Rate is ',msglen_sum/((time()-y)*1000),'KB')
+                  'The total average Rate is ',msglen_sum/((time()-y)*1000),'KB/s')
             self.client.close()
         return
     
