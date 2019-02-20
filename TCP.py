@@ -131,7 +131,7 @@ class Frames_rcv(mp.Process):
         return
     
     def get_frame(self,rgb = True):
-        frame_ , msglen , spf = self.frames.get(True,5)
+        frame_ , msglen , spf = self.frames.get(True,60)
         frame_ = decode_frame(frame_)
         
         if self.status:
