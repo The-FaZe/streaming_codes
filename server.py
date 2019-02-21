@@ -1,9 +1,14 @@
 import socket
 from time import sleep
+
+
+print("start python code........")
+
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 ip =socket.gethostbyname(socket.gethostname())
 port = 6666
 server_address = (ip,port)
+print("ip: ",ip)
 sock.bind(server_address)
 print ('starting up on',server_address[0],':',server_address[1])
 sock.listen(1)
