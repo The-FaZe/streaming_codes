@@ -86,7 +86,7 @@ def send_frame(connection,img,Quality=90):
     print(buff)
     buff = pack('>L',buff)
     enc_img1 = enc_img.tostring()
-    connection.send(buff)
+    connection.sendall(buff)
     connection.sendall(enc_img1)
     return
 
