@@ -2,7 +2,7 @@ import socket
 from time import sleep
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 ip =socket.gethostbyname(socket.gethostname())
-server_address = ("",8653)
+server_address = ("",8345)
 client.connect(server_address)
 print(client)
 message = 'Hi from the client'
