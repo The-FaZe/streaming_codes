@@ -4,7 +4,6 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 ip =socket.gethostbyname(socket.gethostname())
 server_address = ("",8345)
 client.connect(server_address)
-print(client)
 message = 'Hi from the client'
 message = message.encode('utf-8')
 client.send(message)
