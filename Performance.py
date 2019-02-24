@@ -12,7 +12,7 @@ def gen_native(i,cond_=threading.Condition(),queue_=deque()):
                         queue_.append(frame)
                         cond_.notifyAll()
                         n += 1
-        print('P1 number of frames generated is',n)
+        print('\nP1 number of frames generated is',n)
 def get_native(i,cond_=threading.Condition(),queue_=deque()):
 	n=0
 	for x in range(0,i):
@@ -21,20 +21,20 @@ def get_native(i,cond_=threading.Condition(),queue_=deque()):
 				cond_.wait()
 			y = queue_.popleft()
 			n += 1
-	print('P1 number of frames received is',n)
+	print('\nP1 number of frames received is',n)
 			
 def main_native():
 	cond_=threading.Condition()
 	queue_=deque()
-	T1 = threading.Thread(target=gen_native,args=(10,cond_,queue_))
-	T2 = threading.Thread(target=get_native,args=(10,cond_,queue_))
+	T1 = threading.Thread(target=gen_native,args=(10000,cond_,queue_))
+	T2 = threading.Thread(target=get_native,args=(10000,cond_,queue_))
 	x = time.time()
 	T2.start()
 	T1.start()
 	T1.join()
 	T2.join()
 	y= time.time()
-	print("P1",y-x,"sec \n")
+	print("\nP1",y-x,"sec \n")
 	
 def gen_queue(i,queue_=Queue()):
         n=0
@@ -42,30 +42,31 @@ def gen_queue(i,queue_=Queue()):
                 frame =np.random.randint(low=0,high=2^32-1, size=(1600,900,3))
                 queue_.put(frame)
                 n += 1
-        print('P2 number of frames generated is',n)
+        print('\n P2 number of frames generated is',n)
 def get_queue(i,queue_=Queue()):
         n=0
         for x in range(0,i):
                 frame = queue_.get()
+                #queue_.task_done()
                 n +=1
-        print('P2 number of frames received is',n)
+        print('\n P2 number of frames received is',n)
 def main_queue():
 	queue_=Queue()
-	T1 = threading.Thread(target=gen_queue,args=(10,queue_))
-	T2 = threading.Thread(target=get_queue,args=(10,queue_))
+	T1 = threading.Thread(target=gen_queue,args=(10000,queue_))
+	T2 = threading.Thread(target=get_queue,args=(10000,queue_))
 	x = time.time()
 	T2.start()
 	T1.start()
 	T1.join()
 	T2.join()
-	queue_.join()
+	#queue_.join()
 	y= time.time()
-	print('P2',y-x,"sec \n")
-	
+	print('\nP2',y-x,"sec")
 if __name__ == '__main__':
-        P1 = mp.Process(target=main_native)
-        P2 = mp.Process(target=main_queue)
+        P1 = mp.Process(target=main_native,name="P1")
+        P2 = mp.Process(target=main_queue,name="P2")
         P1.start()
         P2.start()
         P1.join()
         P2.join()
+        time.sleep(10)
