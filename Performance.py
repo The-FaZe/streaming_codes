@@ -6,8 +6,9 @@ import time
 from collections import deque
 def gen_native(i,cond_=threading.Condition(),queue_=deque()):
         n=0
+        frame =np.random.randint(low=0,high=2^32-1, size=(1600,900,3))
         for x in range(0,i):
-                frame =np.random.randint(low=0,high=2^32-1, size=(1600,900,3)) 
+                frame =100; 
                 with cond_:
                         queue_.append(frame)
                         cond_.notifyAll()
@@ -38,8 +39,8 @@ def main_native():
 	
 def gen_queue(i,queue_=Queue()):
         n=0
+        frame =np.random.randint(low=0,high=2^32-1, size=(1600,900,3))
         for x in range(0,i):
-                frame =np.random.randint(low=0,high=2^32-1, size=(1600,900,3))
                 queue_.put(frame)
                 n += 1
         print('\n P2 number of frames generated is',n)
