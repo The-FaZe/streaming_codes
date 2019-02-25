@@ -4,6 +4,7 @@ import subprocess as sp
 def ssh_tun(port):
 	s = "localhost:"+port+":localhost:"+port
 	s=sp.run(["ssh","-R",s,"login01","-N"])
+	print ("I")
 
 port = sp.run(["shuf","-i8000-9999","-n1"],capture_output=True)
 port =port.stdout.strip().decode()
