@@ -15,4 +15,4 @@ cd ~/data
 
 echo "Start Testing ..................................."
 
-python -u test.py
+python -u ~/data/streaming_codes/test.py

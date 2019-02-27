@@ -1,1 +1,1 @@
-python Segmentation.py
+python server_HPC.py
