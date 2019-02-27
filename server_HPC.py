@@ -11,7 +11,7 @@ def test_server():
 		count = 0
 		conn,T_thr = Network.set_server(port=6666,Tunnel=Tunnel_)
 		rcv_frames = Streaming.rcv_frames_thread(connection=conn)
-		fourcc = cv2.VideoWriter_fourcc(*'XVID')
+		fourcc = cv2.VideoWriter_fourcc(*'MPG4')
 		out = cv2.VideoWriter('output.mp4',fourcc, 6, (224,224))
 		while rcv_frames.isAlive():
 			frame = rcv_frames.get()
@@ -22,7 +22,7 @@ def test_server():
 			#cv2.imshow('frame',frame)
 			#cv2.waitKey(30)
 		rcv_frames.close()
-		if Tunnel:
+		if Tunnel_:
 			T_thr.terminate()
 		out.release()
 		print("count is",count)
@@ -32,7 +32,7 @@ def test_server():
 		rcv_frames.close()
 		#cv2.destroyAllWindows()
 		conn.close()
-		if Tunnel:
+		if Tunnel_:
 			T_thr.terminate()
 		out.release()
 		print("count is",count)
