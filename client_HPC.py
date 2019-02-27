@@ -17,7 +17,7 @@ def send_test():
 			cv2.waitKey(30)
 		capture.close()
 		cv2.destroyAllWindows()
-	
+
 	except (KeyboardInterrupt,IOError,OSError):
 		capture.close()
 		cv2.destroyAllWindows()
