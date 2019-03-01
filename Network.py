@@ -27,7 +27,7 @@ def ssh_tun():
     print("port:",port)
     s="ssh -L localhost:"+port+":localhost:"+port+" alex039u4@hpc.bibalex.org -N "
     print("copy the following command \n",s)
-    return int(port,T)
+    return int(port),T
 
 
 
