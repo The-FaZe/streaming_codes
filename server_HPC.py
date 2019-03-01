@@ -7,7 +7,7 @@ import cv2
 from time import sleep
 def test_server():
 	try:
-		Tunnel_ = False
+		Tunnel_ = True
 		count = 0
 		conn,T_thr = Network.set_server(port=6666,Tunnel=Tunnel_)
 		rcv_frames = Streaming.rcv_frames_thread(connection=conn)
