@@ -40,7 +40,10 @@ def set_server(port=None,Tunnel=True,n=1):
     else:
         T = None
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)    #specifying socket type is IPV4"socket.AF_INET" and TCP "SOCK_STREAM"
-    ip =socket.gethostbyname(socket.gethostname())              # Getting the local ip of the server
+    if Tunnel:
+        ip = "localhost"
+    else:
+        ip =socket.gethostbyname(socket.gethostname())              # Getting the local ip of the server
     server_address = (ip,port)      # saving ip and port as tuple
     sock.bind(server_address)       # attaching the socket to the pc (code)
     print ('starting up on',server_address[0],':',server_address[1])
