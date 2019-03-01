@@ -11,8 +11,8 @@ def test_server():
 		count = 0
 		conn,T_thr = Network.set_server(port=6666,Tunnel=Tunnel_)
 		rcv_frames = Streaming.rcv_frames_thread(connection=conn)
-		fourcc = cv2.VideoWriter_fourcc(*'MPG4')
-		out = cv2.VideoWriter('output.mp4',fourcc, 6, (224,224))
+		fourcc = cv2.VideoWriter_fourcc(*'XVID')
+		out = cv2.VideoWriter('output.avi',fourcc, 6, (224,224))
 		while rcv_frames.isAlive():
 			frame = rcv_frames.get()
 			if frame is 0:
