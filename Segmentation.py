@@ -126,10 +126,11 @@ class Cap_Process(mp.Process):
         try:
             client = Network.set_client(port=self.port,
                 ip=self.ip,Tunnel=self.Tunnel)
+            client2 = Network.set_client(port=self.port,
+                ip=self.ip,Tunnel=self.Tunnel)
             vid_cap = cv2.VideoCapture(self.id_)
             success, frame_ = vid_cap.read()
             if not success:
-                print ('No Camera is detected ')
                 vid_cap.release()
                 send_frames.close()
                 self.frames.put(True)
@@ -137,32 +138,44 @@ class Cap_Process(mp.Process):
             print("The camera is detected")
 
             send_frames = Streaming.send_frames_thread(client)
-            
-            while (success and self.key.value and send_frames.isAlive()):
-                if self.rgb:
-                    frame_ = frame[...,::-1]    # Converting from BGR to RGB  
-                
+
+            rcv_results = Streaming.rcv_results_thread(connection=client2
+                ,scores_f=False)
+            while (success and self.key.value and send_frames.isAlive() and rcv_results.isAlive()):
                 if self.index.index():
+                    rcv_results.add()
+                    if self.rgb:
+                        frame_= frame[...,::-1]    # Converting from BGR to RGB  
                     send_frames.put(cv2.resize(frame_,(224,224)))
+                    count,status,scores=rcv_results.get()
+                    if len(status):
+                        s1 ="Delay of the processing is "+str(count)+" fps"
+                        s2 = "The number of waiting frames in buffer is "+str(self.frames.qsize())+" frame"
+                        s3 = "the rate of sending frames is "+str(status[0])+" fps"
+                        s4 = "The rate of sending data is "+str(status[1])+" KB/s"
+                        s = (s1,s2,s3,s4)
+                        add_status(frame_,s=s)
                     self.frames.put(frame_)
                     
+                    
                 success, frame_ = vid_cap.read()
+        except (KeyboardInterrupt,IOError,OSError) as e :
+            pass
+
+
+        finally:
             self.frames.put(True)
+            send_frames.close()
+            rcv_results.close()
             client.close()
             print("The program cut the connection")
-            send_frames.close()
             vid_cap.release()
-            print("The program broke the connection to the camera")
-        except (KeyboardInterrupt,IOError,OSError) :
-            self.frames.put(True)
-            client.close()
-            print("The program cut the connection")
-            vid_cap.release()
-            send_frames.close()
             print("The program broke the connection to the camera")
 
-    def get(self,rgb = True):
-        frame_ = self.frames.get()      # Getting a frame from the queue
+
+
+    def get(self):
+        frame_ = self.frames.get() 
 		# Returning the frame as an output
         return frame_
 
@@ -195,23 +208,12 @@ class mean():
 
 # A method to add status on the image the frame_ is the incoming image and s1,s2,s3 are the txt to put on the image
 
-def add_status(frame_, s1='put your first  text'
-                     , s2='put your second text'
-                     , s3='put your third  text'):
-    font                   = cv2.FONT_HERSHEY_SIMPLEX
-    bottomLeftCornerOfText1 = (5,10)
-    bottomLeftCornerOfText2 = (5,20)
-    bottomLeftCornerOfText3 = (5,30)
-
-    fontScale              = 0.3
-    fontColor              = (255,255,255)
-    lineType               = 1
-    cv2.putText(frame_,s1, bottomLeftCornerOfText1, 
-    font, fontScale, fontColor, lineType)
-
-    cv2.putText(frame_,s2, bottomLeftCornerOfText2, 
-    font, fontScale, fontColor, lineType)
-
-    cv2.putText(frame_,s3, bottomLeftCornerOfText3, 
-    font, fontScale, fontColor, lineType)
+def add_status(frame_,s=(),x=5,y=10,i=20,font = cv2.FONT_HERSHEY_SIMPLEX
+    ,fontScale = 0.4,fontcolor=(255,255,255),lineType=1):
+    c = 0
+    for s_ in s:
+        l = i*c
+        cv2.putText(frame_,s_, (x,y+l) 
+            ,font, fontScale, fontcolor, lineType)
+        c += 1
 

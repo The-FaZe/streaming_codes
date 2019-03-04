@@ -4,6 +4,7 @@ from time import time
 import threading
 from socket import socket
 import Segmentation
+from struct import pack,unpack,calcsize
 
 class rcv_frames_thread(threading.Thread):
     def __init__(self,connection=socket()
@@ -40,14 +41,11 @@ class rcv_frames_thread(threading.Thread):
                 #adding the (frame received,the size of the frame and the total time it took to receive it) in the shared memory buffer
                 self.frames.put([frame_,msglen,time()-x]) 
 
-            #calculating and printing the average speed of the connection 
-            print('The secound process is terminated \n',
-                  'The total average Rate is ',msglen_sum/((time()-y)*1000),'KB/s')
-            self.frames.close() 
-            self.connection.close() #closing the connection if the for loop is broken
-
         #breaking the connection and terminating the process if there is an error , interruption or connection break 
         except ( KeyboardInterrupt,IOError,OSError)as e:
+            pass
+
+        finally:
             print('The secound process is terminated \n',   #calculating and printing the average speed of the connection 
                   'The total average Rate is ',msglen_sum/((time()-y)*1000),'KB/s')
             self.connection.close() #closing the connection if the for loop is broken
@@ -61,17 +59,13 @@ class rcv_frames_thread(threading.Thread):
     def get(self):
         frame_ = self.frames.get() #blocking until getting the data with time out of 60 s 
         if frame_ is 0:
-            return 0
+            return 0,()
         frame_ , msglen , spf = frame_
-        frame_ = Network.decode_frame(frame_) #decoding the frames 
-        
-        if self.status: #printing status if desired 
-            [msglen_rate,spf] = self.m.mean([msglen,spf])
-            Segmentation.add_status(frame_,s1 = 'size :'+str(msglen/1000)+'KB'
-                             ,s2 = 'FPS :'+str(1/spf)
-                             ,s3= 'Rate :'+str(msglen_rate/(spf*1000))+'KB/s')
+        frame_ = Network.decode_frame(frame_) #decoding the frames
+        [msglen_rate,spf] = self.m.mean([msglen,spf])
+        status = (1/spf,msglen_rate/(spf*1000))        
 
-        return frame_                                   #Returning the frame as an output
+        return frame_ ,status                                #Returning the frame as an output
 
     # The method is responsible for Quiting the program swiftly with no daemon process
     # the method is to be using in the main process code 
@@ -80,8 +74,6 @@ class rcv_frames_thread(threading.Thread):
         self.frames.close() # declaring there is no frames will be put on the shared queue from the main process
         self.join() # waiting for the parallel process to terminate
         print('The program has been terminated ')
-
-
 
 
 class send_frames_thread(threading.Thread):
@@ -98,17 +90,16 @@ class send_frames_thread(threading.Thread):
 
                 Network.send_frame(self.connection,self.frames.get())
 
-            self.frames.close()
-            self.connection.close()
-            print('sending Frames is stopped ')
+        except(KeyboardInterrupt,IOError,OSError) as e:
+            pass
 
-        except(KeyboardInterrupt,IOError,OSError):
+        finally:
             self.frames.close()
             self.connection.close()
             print('sending Frames is stopped')
 
     def put(self,frame):
-        return self.frames.put(frame)
+        self.frames.put(frame)
 
     def close(self):
         self.key = False # breaking the while loop of it's still on in the parallel process(run)
@@ -116,6 +107,89 @@ class send_frames_thread(threading.Thread):
         self.join() # waiting for the parallel process to terminate
 
 
+class send_results_thread(threading.Thread):
+    def __init__(self,connection=socket(),nmb_scores=5,nmb_status=2,
+        status_f=True,scores_f=True):
+        self.key_ = True
+        self.results = Segmentation.thrQueue()
+        self.connection = connection
+        self.scores_f = scores_f
+        self.status_f = status_f
+        self.fmb = ">"+status_f*nmb_status*"f"+scores_f*nmb_scores*"Bf"
+        threading.Thread.__init__(self)
+        self.start()
+    def run(self):
+        try:
+            while (self.key_):
+                results_ = pack(self.fmb,*self.results.get())
+                self.connection.sendall(results_)
+        except(KeyboardInterrupt,IOError,OSError) as e:
+            pass
+
+        finally:
+            self.connection.close()
+            self.results.close()
+            print('sending results is stopped')
+
+    def put(self,status=(),scores=()):
+        self.results.put(status*self.status_f + self.scores_f*scores)
+
+    def close(self):
+        self.key_ = False # breaking the while loop of it's still on in the parallel process(run)
+        self.results.close()
+        self.join() # waiting for the parallel process to terminate
+
+
+        
+
+class rcv_results_thread(threading.Thread):
+    def __init__(self,connection=socket(),nmb_scores=5,nmb_status=2
+        ,status_f=True,scores_f=True):
+        self.key_ = True
+        self.connection = connection
+        self.fmb = ">"+status_f*nmb_status*"f"+scores_f*nmb_scores*"Bf"
+        self.buff = calcsize(self.fmb)
+        self.count = 0
+        self.result_ = ()
+        self.cond = threading.Condition()
+        self.scores_f = scores_f
+        self.status_f = status_f
+        self.nmb_scores = nmb_scores
+        self.nmb_status = nmb_status
+        threading.Thread.__init__(self)
+        self.start()
+
+
+    def run(self):
+        try:
+            while (self.key_):
+                results = Network.recv_msg(self.connection, self.buff, 2048)
+                results = unpack(self.fmb,results)
+                with self.cond:
+                    self.result_ = results
+                    self.count -=1
+        except(KeyboardInterrupt,IOError,OSError) as e:
+            pass
+        finally:
+            self.connection.close()
+            print('receiving results is stopped')
+
+
+    def get(self):
+        with self.cond:
+            result = self.result_
+            count = self.count
+        status = result[:self.nmb_status]*self.status_f
+        scores = result[-self.nmb_scores:]*self.scores_f
+        return count,status,scores
+
+    def add(self):
+        with self.cond:
+            self.count += 1
+
+    def close(self):
+        self.key_ = False # breaking the while loop of it's still on in the parallel process(run)
+        self.join() # waiting for the parallel process to terminate
 
 
 # A class inherited from the multiprocessing module

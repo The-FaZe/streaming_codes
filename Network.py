@@ -34,7 +34,7 @@ def ssh_tun():
 # A method to set the host of the connection(initialization) but u have to specify the port if the tunneling isn't used
 # the connection is TCP/IP - the ip of the server is the ip of the host locally
 # n is the number of parallel connections to the server is (default is 1)
-def set_server(port=None,Tunnel=True,n=1):
+def set_server(port=None,Tunnel=True,n=2):
     if Tunnel:
         port,T = ssh_tun()
     else:
@@ -51,6 +51,9 @@ def set_server(port=None,Tunnel=True,n=1):
     print('step#1')
     connection, client_address = sock.accept() #accepting that client and hosting a connection with him
     print('client_address is ',client_address[0],client_address[1])
+    connection2, client_address = sock.accept() #accepting that client and hosting a connection with him
+    print('client_address is ',client_address[0],client_address[1])
+    connection = (connection,connection2)
     return connection,T  #returning the connection object for further use
 
 
@@ -90,6 +93,8 @@ def recv_msg(connection,msglen,bufferlen):
     except ( KeyboardInterrupt,IOError,OSError)as e:
         connection.close()
         raise e
+
+
 
 # A method to send frame from either end of the communication with specifying the connection object
 # the img input is a pure image without any encoding

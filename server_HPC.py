@@ -7,35 +7,23 @@ import cv2
 from time import sleep
 def test_server():
 	try:
-		Tunnel_ = True
-		count = 0
-		conn,T_thr = Network.set_server(port=6666,Tunnel=Tunnel_)
-		rcv_frames = Streaming.rcv_frames_thread(connection=conn)
-		fourcc = cv2.VideoWriter_fourcc(*'XVID')
-		out = cv2.VideoWriter('output.avi',fourcc, 6, (224,224))
-		while rcv_frames.isAlive():
-			frame = rcv_frames.get()
+		Tunnel_ = False
+		conn,T_thr = Network.set_server(port=6666,Tunnel=Tunnel_,n=1)
+		rcv_frames = Streaming.rcv_frames_thread(connection=conn[0])
+		send_results = Streaming.send_results_thread(connection=conn[1],scores_f=False)
+		while (rcv_frames.isAlive() and send_results.isAlive()):
+			frame,status = rcv_frames.get()
 			if frame is 0:
-				break
-			count += 1
-			out.write(frame)
-			#cv2.imshow('frame',frame)
-			#cv2.waitKey(30)
+				break                
+			send_results.put(status=status)
+	except (KeyboardInterrupt,IOError,OSError) as e:
+		pass
+	finally:
 		rcv_frames.close()
+		send_results.close()
+		conn[0].close()
+		conn[1].close()
 		if Tunnel_:
 			T_thr.terminate()
-		out.release()
-		print("count is",count)
-		#cv2.destroyAllWindows()
-                
-	except (KeyboardInterrupt,IOError,OSError):
-		rcv_frames.close()
-		#cv2.destroyAllWindows()
-		conn.close()
-		if Tunnel_:
-			T_thr.terminate()
-		out.release()
-		print("count is",count)
-		sleep(3)
 if __name__ == '__main__':
 	test_server()

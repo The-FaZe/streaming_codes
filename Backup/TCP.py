@@ -9,7 +9,7 @@ import multiprocessing as mp
 
 class mean():
     def __init__(self,max = 30):
-        self.queue = np.array([])
+        self.queue = []
         self.max = max
     def mean(self,inp,dim=2):
         if self.queue.size is 0:

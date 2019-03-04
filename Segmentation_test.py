@@ -11,15 +11,13 @@ def test_thread():
             cv2.imshow('frame',frame)          # The rest of code here(Any kind of processing is here)
             cv2.waitKey(30)
         frames.exit()
-        print('The programe is terminated ')
-        cv2.destroyAllWindows()
-        sleep(2)
     except KeyboardInterrupt:
         print("Interrupt")
-        frames.exit()
+    finally:
         print('The programe is terminated ')
         cv2.destroyAllWindows()
         sleep(2)
+
 
 def test_process():
     try:
@@ -30,12 +28,11 @@ def test_process():
                 break
             cv2.imshow('frame',frame)          # The rest of code here(Any kind of processing is here)
             cv2.waitKey(30)
-        frames.exit()
-        print('The programe is terminated ')
-        cv2.destroyAllWindows()
-        sleep(2)
+
     except KeyboardInterrupt:
         print("Interrupt")
+
+    finally :
         frames.exit()
         print('The programe is terminated ')
         cv2.destroyAllWindows()
