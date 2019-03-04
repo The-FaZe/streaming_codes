@@ -15,7 +15,7 @@ def send_test():
 			if frame is True :
 				break
 			cv2.imshow('frame',frame)
-			cv2.waitKey(30)
+			cv2.waitKey(10)
 	except (KeyboardInterrupt,IOError,OSError)as e:
 		pass
 	finally:
