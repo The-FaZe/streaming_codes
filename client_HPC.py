@@ -9,7 +9,7 @@ def send_test():
 	try:
 		id = 0
 		capture =Segmentation.Cap_Process(fps_old=1,fps_new=1,id_=id
-			,port=6666,ip="192.168.1.2",Tunnel=False,rgb=False)
+			,port=6666,ip="localhost",Tunnel=True,rgb=False)
 		while capture.is_alive():
 			frame = capture.get()
 			if frame is True :
