@@ -8,6 +8,7 @@ import multiprocessing as mp
 from collections import deque
 import Network
 import Streaming
+from TopN import Top_N
 # A class to generate random index that segment the real time stream
 # then pick snippets out of every segment in real time behaviour 
 class decision():
@@ -99,7 +100,7 @@ class Cap_Thread(threading.Thread):
     def get(self,rgb = True):
         frame_ = self.frames.get()      # Getting a frame from the queue
         if rgb:
-            frame_ = frame[...,::-1]    # Converting from BGR to RGB 
+            frame_ = frame_[...,::-1]    # Converting from BGR to RGB 
         return frame_ 			# Returning the frame as an output
 
     def close(self):
@@ -137,17 +138,24 @@ class Cap_Process(mp.Process):
                 return
             print("The camera is detected")
 
+            classInd_file = 'UCF_lists/classInd.txt' #text file name
+            top5_actions = Top_N(classInd_file)
+
             send_frames = Streaming.send_frames_thread(client)
 
-            rcv_results = Streaming.rcv_results_thread(connection=client2
-                ,scores_f=False)
+            rcv_results = Streaming.rcv_results_thread(connection=client2)
+            score = ();
+            init = 0
             while (success and self.key.value and send_frames.isAlive() and rcv_results.isAlive()):
                 if self.index.index():
                     rcv_results.add()
                     if self.rgb:
-                        frame_= frame[...,::-1]    # Converting from BGR to RGB  
+                        frame_= frame_[...,::-1]    # Converting from BGR to RGB  
                     send_frames.put(cv2.resize(frame_,(224,224)))
-                    count,status,scores=rcv_results.get()
+                    count,status,score_=rcv_results.get()
+                    if len(score_[0]):
+                        init = 1
+                        top5_actions.import_indecies_top_N_scores(score_)
                     if len(status):
                         s1 ="Delay of the processing is "+str(count)+" fps"
                         s2 = "The number of waiting frames in buffer is "+str(self.frames.qsize())+" frame"
@@ -155,9 +163,10 @@ class Cap_Process(mp.Process):
                         s4 = "The rate of sending data is "+str(status[1])+" KB/s"
                         s = (s1,s2,s3,s4)
                         add_status(frame_,s=s)
+                    if init:
+                        top5_actions.add_scores(frame_)
                     self.frames.put(frame_)
-                    
-                    
+        
                 success, frame_ = vid_cap.read()
         except (KeyboardInterrupt,IOError,OSError) as e :
             pass
@@ -216,4 +225,3 @@ def add_status(frame_,s=(),x=5,y=10,i=20,font = cv2.FONT_HERSHEY_SIMPLEX
         cv2.putText(frame_,s_, (x,y+l) 
             ,font, fontScale, fontcolor, lineType)
         c += 1
-

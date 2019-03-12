@@ -56,12 +56,14 @@ class rcv_frames_thread(threading.Thread):
 
     #The method is responsible for consuming data from the queue ,decoding it
     # printing status on it and converting it into RGB if desired 
-    def get(self):
+    def get(self,rgb=True):
         frame_ = self.frames.get() #blocking until getting the data with time out of 60 s 
         if frame_ is 0:
             return 0,()
         frame_ , msglen , spf = frame_
         frame_ = Network.decode_frame(frame_) #decoding the frames
+        if rgb:
+            frame_ = frame_[...,::-1]    # Converting from BGR to RGB
         [msglen_rate,spf] = self.m.mean([msglen,spf])
         status = (1/spf,msglen_rate/(spf*1000))        
 
@@ -108,20 +110,27 @@ class send_frames_thread(threading.Thread):
 
 
 class send_results_thread(threading.Thread):
-    def __init__(self,connection=socket(),nmb_scores=5,nmb_status=2,
-        status_f=True,scores_f=True):
+    def __init__(self,connection=socket(),nmb_scores=5,nmb_status=2):
         self.key_ = True
         self.results = Segmentation.thrQueue()
         self.connection = connection
-        self.scores_f = scores_f
-        self.status_f = status_f
-        self.fmb = ">"+status_f*nmb_status*"f"+scores_f*nmb_scores*"Bf"
+        self.check = (nmb_status,2*nmb_scores,2*nmb_scores+nmb_status)
         threading.Thread.__init__(self)
         self.start()
     def run(self):
         try:
             while (self.key_):
-                results_ = pack(self.fmb,*self.results.get())
+
+                result = self.results.get()
+                if result is 0:
+                    break
+                flag = self.check.index(len(result))
+                flag_ = pack(">B", flag)
+                self.connection.sendall(flag_)
+                nmb_status = (not(flag%2))*self.check[0]
+                nmb_scores = (bool(flag))*self.check[1]//2
+                fmb = ">"+nmb_status*"f"+nmb_scores*"B"+nmb_scores*"f"
+                results_ = pack(fmb,*result)
                 self.connection.sendall(results_)
         except(KeyboardInterrupt,IOError,OSError) as e:
             pass
@@ -132,7 +141,7 @@ class send_results_thread(threading.Thread):
             print('sending results is stopped')
 
     def put(self,status=(),scores=()):
-        self.results.put(status*self.status_f + self.scores_f*scores)
+        self.results.put(status + scores)
 
     def close(self):
         self.key_ = False # breaking the while loop of it's still on in the parallel process(run)
@@ -143,17 +152,15 @@ class send_results_thread(threading.Thread):
         
 
 class rcv_results_thread(threading.Thread):
-    def __init__(self,connection=socket(),nmb_scores=5,nmb_status=2
-        ,status_f=True,scores_f=True):
+    def __init__(self,connection=socket(),nmb_scores=5,nmb_status=2):
         self.key_ = True
         self.connection = connection
-        self.fmb = ">"+status_f*nmb_status*"f"+scores_f*nmb_scores*"Bf"
-        self.buff = calcsize(self.fmb)
+        self.fmb = (">{}f".format(nmb_status)
+            ,">{}B{}f".format(nmb_scores,nmb_scores)
+            ,">{}f{}B{}f".format(nmb_status,nmb_scores,nmb_scores))
         self.count = 0
         self.result_ = ()
         self.cond = threading.Condition()
-        self.scores_f = scores_f
-        self.status_f = status_f
         self.nmb_scores = nmb_scores
         self.nmb_status = nmb_status
         threading.Thread.__init__(self)
@@ -163,8 +170,11 @@ class rcv_results_thread(threading.Thread):
     def run(self):
         try:
             while (self.key_):
-                results = Network.recv_msg(self.connection, self.buff, 2048)
-                results = unpack(self.fmb,results)
+                flag = Network.recv_msg(self.connection, 1 , 1)
+                flag = int(unpack(">B",flag)[0])
+                fmb = self.fmb[flag]
+                results = Network.recv_msg(self.connection,calcsize(fmb), 2048)
+                results = unpack(fmb,results)
                 with self.cond:
                     self.result_ = results
                     self.count -=1
@@ -179,9 +189,19 @@ class rcv_results_thread(threading.Thread):
         with self.cond:
             result = self.result_
             count = self.count
-        status = result[:self.nmb_status]*self.status_f
-        scores = result[-self.nmb_scores:]*self.scores_f
-        return count,status,scores
+        if(len(result)==self.nmb_status):
+            status = result
+            action_index = ()
+            scores = ()
+        elif(len(result)==2*self.nmb_scores):
+            status =()
+            action_index = result[:self.nmb_scores]
+            scores = result[self.nmb_scores:]
+        else:
+            status = result[:self.nmb_status]
+            action_index = result[-self.nmb_scores*2:-self.nmb_scores]
+            scores = result[-self.nmb_scores:]
+        return count,status,(action_index,scores)
 
     def add(self):
         with self.cond:
