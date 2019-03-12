@@ -167,6 +167,8 @@ def First_step():
                 top5_actions.import_scores(scores)
                 indecies,_,scores = top5_actions.get_top_N_actions()
                 send_results.put(status=status,scores=(*indecies,*scores))
+                
+               frames = []
             else:
                 send_results.put(status=status)
   except (KeyboardInterrupt,IOError,OSError) as e:
