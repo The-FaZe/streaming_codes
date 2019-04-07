@@ -150,7 +150,7 @@ class Cap_Process(mp.Process):
                 if self.index.index():
                     rcv_results.add()
                     if self.rgb:
-                        frame_= frame_[...,::-1]    # Converting from BGR to RGB  
+                        frame_ = cv2.cvtColor(frame_, cv2.COLOR_BGR2RGB)    # Converting from BGR to RGB  
                     send_frames.put(cv2.resize(frame_,(224,224)))
                     count,status,score_=rcv_results.get()
                     if len(score_[0]):
@@ -162,7 +162,7 @@ class Cap_Process(mp.Process):
                         s3 = "the rate of sending frames is "+str(status[0])+" fps"
                         s4 = "The rate of sending data is "+str(status[1])+" KB/s"
                         s = (s1,s2,s3,s4)
-                        add_status(frame_,s=s)
+                        #add_status(frame_,s=s)
                     if init:
                         top5_actions.add_scores(frame_)
                     self.frames.put(frame_)
@@ -220,6 +220,7 @@ class mean():
 def add_status(frame_,s=(),x=5,y=10,i=20,font = cv2.FONT_HERSHEY_SIMPLEX
     ,fontScale = 0.4,fontcolor=(255,255,255),lineType=1):
     c = 0
+    print(frame_.shape)
     for s_ in s:
         l = i*c
         cv2.putText(frame_,s_, (x,y+l) 

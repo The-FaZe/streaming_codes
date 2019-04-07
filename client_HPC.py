@@ -5,11 +5,21 @@ import threading
 import multiprocessing as mp
 import cv2
 from time import sleep
+import argparse
+
+parser = argparse.ArgumentParser(description='Online Action Recognition')
+parser.add_argument('--p',dest='port',type = int,default =6666)
+parser.add_argument('--ip',type=str, default='l92.168.1.3')
+parser.add_argument('--tun',dest = 'tunnel',action='store_true')
+parser.add_argument('--rgb',action='store_true')
+parser.add_argument('--Ofps',dest= 'old_fps',type= int,default=30)
+parser.add_argument('--Nfps',dest= 'new_fps',type= int,default=30)
+args = parser.parse_args()
 def send_test():
 	try:
 		id = 0
-		capture =Segmentation.Cap_Process(fps_old=1,fps_new=1,id_=id
-			,port=6666,ip="192.168.1.2",Tunnel=True,rgb=False)
+		capture =Segmentation.Cap_Process(fps_old=args.old_fps,fps_new=args.new_fps,id_=id
+			,port=args.port,ip=args.ip,Tunnel=args.tunnel,rgb=False)
 		while capture.is_alive():
 			frame = capture.get()
 			if frame is True :

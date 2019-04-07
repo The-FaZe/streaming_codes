@@ -4,6 +4,7 @@ import threading
 import multiprocessing as mp
 from TopN import Top_N
 import numpy as np
+
 def test_server():
 	try:
 		Tunnel_ = False
@@ -32,7 +33,6 @@ def test_server():
 		send_results.close()
 		conn[0].close()
 		conn[1].close()
-		if Tunnel_:
-			T_thr.terminate()
+
 if __name__ == '__main__':
 	test_server()
