@@ -9,7 +9,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Online Action Recognition')
 parser.add_argument('--p',dest='port',type = int,default =6666)
-parser.add_argument('--ip',type=str, default='l92.168.1.3')
+parser.add_argument('--ip',type=str, default='localhost')
 parser.add_argument('--tun',dest = 'tunnel',action='store_true')
 parser.add_argument('--rgb',action='store_true')
 parser.add_argument('--Ofps',dest= 'old_fps',type= int,default=30)

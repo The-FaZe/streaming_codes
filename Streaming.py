@@ -2,6 +2,7 @@ import Network
 import multiprocessing as mp
 from time import time
 import threading
+from cv2 import cvtColor,COLOR_BGR2RGB
 from socket import socket
 import Segmentation
 from struct import pack,unpack,calcsize
@@ -63,7 +64,7 @@ class rcv_frames_thread(threading.Thread):
         frame_ , msglen , spf = frame_
         frame_ = Network.decode_frame(frame_) #decoding the frames
         if rgb:
-            frame_ = cv2.cvtColor(frame_, cv2.COLOR_BGR2RGB)    # Converting from BGR to RGB
+            frame_ = cvtColor(frame_, COLOR_BGR2RGB)    # Converting from BGR to RGB
         [msglen_rate,spf] = self.m.mean([msglen,spf])
         status = (1/spf,msglen_rate/(spf*1000))        
 
