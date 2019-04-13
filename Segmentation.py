@@ -6,6 +6,7 @@ import threading
 import cv2
 import multiprocessing as mp
 from collections import deque
+from itertools import cycle
 import Network
 import Streaming
 from TopN import Top_N
@@ -66,7 +67,7 @@ class thrQueue():
         self.queue_.clear()
         
         
-
+"""
 class Cap_Thread(threading.Thread):
     
     def __init__(self,fps_old,fps_new,port,id_=0):
@@ -109,10 +110,10 @@ class Cap_Thread(threading.Thread):
         self.frames.close()
         print ('No More frames to capture ')
 
-
+"""
 class Cap_Process(mp.Process):
     
-    def __init__(self,fps_old,fps_new,id_,port,ip="",Tunnel=True,rgb=True):
+    def __init__(self,fps_old,fps_new,id_,port,ip="",Tunnel=True,rgb=True,N1=1,N0=0):
         self.frames = mp.Queue(0)
         self.key = mp.Value('b',True)
         self.rgb = rgb
@@ -121,6 +122,8 @@ class Cap_Process(mp.Process):
         self.port = port
         self.ip = ip
         self.Tunnel = Tunnel
+        self.N1=N1
+        self.N0=N0
         mp.Process.__init__(self)
         self.start()
     def run(self):
@@ -131,6 +134,7 @@ class Cap_Process(mp.Process):
                 ip=self.ip,Tunnel=self.Tunnel)
             vid_cap = cv2.VideoCapture(self.id_)
             success, frame_ = vid_cap.read()
+            itern = cycle(self.N1*(1,)+self.N0*(0,))
             if not success:
                 vid_cap.release()
                 send_frames.close()
@@ -148,24 +152,25 @@ class Cap_Process(mp.Process):
             init = 0
             while (success and self.key.value and send_frames.isAlive() and rcv_results.isAlive()):
                 if self.index.index():
-                    rcv_results.add()
-                    if self.rgb:
-                        frame_ = cv2.cvtColor(frame_, cv2.COLOR_BGR2RGB)    # Converting from BGR to RGB  
-                    send_frames.put(cv2.resize(frame_,(224,224)))
-                    count,status,score_=rcv_results.get()
-                    if len(score_[0]):
-                        init = 1
-                        top5_actions.import_indecies_top_N_scores(score_)
-                    if len(status):
-                        s1 ="Delay of the processing is "+str(count)+" fps"
-                        s2 = "The number of waiting frames in buffer is "+str(self.frames.qsize())+" frame"
-                        s3 = "the rate of sending frames is "+str(status[0])+" fps"
-                        s4 = "The rate of sending data is "+str(status[1])+" KB/s"
-                        s = (s1,s2,s3,s4)
-                        add_status(frame_,s=s)
-                    if init:
-                        top5_actions.add_scores(frame_)
-                    self.frames.put(frame_)
+                    if next(itern):
+                        rcv_results.add()
+                        if self.rgb:
+                            frame_ = cv2.cvtColor(frame_, cv2.COLOR_BGR2RGB)    # Converting from BGR to RGB  
+                        send_frames.put(cv2.resize(frame_,(224,224)))
+                        count,status,score_=rcv_results.get()
+                        if len(score_[0]):
+                            init = 1
+                            top5_actions.import_indecies_top_N_scores(score_)
+                        if len(status):
+                            s1 ="Delay of the processing is "+str(count)+" fps"
+                            s2 = "The number of waiting frames in buffer is "+str(self.frames.qsize())+" frame"
+                            s3 = "the rate of sending frames is "+str(status[0])+" fps"
+                            s4 = "The rate of sending data is "+str(status[1])+" KB/s"
+                            s = (s1,s2,s3,s4)
+                            add_status(frame_,s=s)
+                        if init:
+                            top5_actions.add_scores(frame_)
+                        self.frames.put(frame_)
         
                 success, frame_ = vid_cap.read()
         except (KeyboardInterrupt,IOError,OSError) as e :
