@@ -7,9 +7,8 @@ import cv2
 import multiprocessing as mp
 from collections import deque
 from itertools import cycle
-import Network
-import Streaming
-from TopN import Top_N
+from . import Network,Streaming
+from .TopN import Top_N
 # A class to generate random index that segment the real time stream
 # then pick snippets out of every segment in real time behaviour 
 class decision():

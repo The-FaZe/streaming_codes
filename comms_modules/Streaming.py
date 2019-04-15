@@ -1,10 +1,9 @@
-import Network
+from . import Network, Segmentation
 import multiprocessing as mp
 from time import time
 import threading
 from cv2 import cvtColor,COLOR_BGR2RGB
 from socket import socket
-import Segmentation
 from struct import pack,unpack,calcsize
 
 class rcv_frames_thread(threading.Thread):
@@ -132,7 +131,6 @@ class send_results_thread(threading.Thread):
                     flag = self.check.index(len(result[0]))
                     flagb = pack(">B", flag | (0x80*result[1]))
                     self.connection.sendall(flagb)
-                    print(result)
                     results_ = pack(self.fmb[flag],*result[0])
                     self.connection.sendall(results_)
                 elif result[1]:
@@ -193,7 +191,6 @@ class rcv_results_thread(threading.Thread):
                     results = None
                 with self.cond:
                     self.result_ = (results,NoActf)
-                    print('E',self.result_)
                     self.count -= 1
                 self.event.set()
         except(KeyboardInterrupt,IOError,OSError) as e:
@@ -206,7 +203,6 @@ class rcv_results_thread(threading.Thread):
     def get(self):
         if self.event.is_set():
             with self.cond:
-                print('A',self.result_)
                 result = self.result_[0]
                 NoAcf = self.result_[1]
                 count = self.count

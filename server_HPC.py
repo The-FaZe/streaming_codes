@@ -1,9 +1,7 @@
-import Streaming
-import Network
-import threading
-import multiprocessing as mp
-from TopN import Top_N
-import numpy as np
+from comms_modules.Network import set_server
+from comms_modules.Streaming import rcv_frames_thread,send_results_thread
+from comms_modules.TopN import Top_N
+from numpy.random import random
 from random import randint
 
 def test_server():
@@ -11,9 +9,9 @@ def test_server():
 		Tunnel_ = False
 		classInd_file = 'UCF_lists/classInd.txt'
 		top5_actions = Top_N(classInd_file)
-		conn,T_thr = Network.set_server(port=6666,Tunnel=Tunnel_,n=1)
-		rcv_frames = Streaming.rcv_frames_thread(connection=conn[0])
-		send_results = Streaming.send_results_thread(connection=conn[1])
+		conn,T_thr = set_server(port=6666,Tunnel=Tunnel_,n=1)
+		rcv_frames = rcv_frames_thread(connection=conn[0])
+		send_results = send_results_thread(connection=conn[1])
 		c = 0
 		NoActf = False 
 		while (rcv_frames.isAlive() and send_results.isAlive()):
@@ -21,7 +19,7 @@ def test_server():
 			if frame is 0:
 				break          
 			if c % 10 == 0 and c != 0:
-				scores = np.random.random(101)
+				scores = random(101)
 				top5_actions.import_scores(scores)
 				index,_,scores = top5_actions.get_top_N_actions()
 				NoActf = bool(randint(0,1))

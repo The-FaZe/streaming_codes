@@ -1,4 +1,4 @@
-from Segmentation import Cap_Process
+from comms_modules.Segmentation import Cap_Process
 import argparse
 from cv2 import imshow,waitKey,destroyAllWindows
 
