@@ -6,14 +6,15 @@ from random import randint
 
 def test_server():
 	try:
+		test = True
 		Tunnel_ = False
 		classInd_file = 'UCF_lists/classInd.txt'
 		top5_actions = Top_N(classInd_file)
 		conn,T_thr = set_server(port=6666,Tunnel=Tunnel_,n=1)
 		rcv_frames = rcv_frames_thread(connection=conn[0])
-		send_results = send_results_thread(connection=conn[1])
+		send_results = send_results_thread(connection=conn[1],test=test)
 		c = 0
-		NoActf = False 
+		Actf = True 
 		while (rcv_frames.isAlive() and send_results.isAlive()):
 			frame,status = rcv_frames.get()
 			if frame is 0:
@@ -22,10 +23,11 @@ def test_server():
 				scores = random(101)
 				top5_actions.import_scores(scores)
 				index,_,scores = top5_actions.get_top_N_actions()
-				NoActf = bool(randint(0,1))
-				send_results.put(status=status,scores=(*index,*scores),NoActf=NoActf)
+				Actf = bool(randint(0,1))
+				print(Actf)
+				send_results.put(status=status,scores=(*index,*scores),Actf=Actf)
 			else:
-				send_results.put(status=status,NoActf=NoActf)
+				send_results.put(status=status,Actf=Actf)
 			c +=1
 	except (KeyboardInterrupt,IOError,OSError) as e:
 		pass

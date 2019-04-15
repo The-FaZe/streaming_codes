@@ -110,7 +110,7 @@ class send_frames_thread(threading.Thread):
 
 
 class send_results_thread(threading.Thread):
-    def __init__(self,connection=socket(),nmb_scores=5,nmb_status=2):
+    def __init__(self,connection=socket(),nmb_scores=5,nmb_status=2,test=False):
         self.key_ = True
         self.results = Segmentation.thrQueue()
         self.connection = connection
@@ -118,6 +118,7 @@ class send_results_thread(threading.Thread):
         self.fmb = (">{}f".format(nmb_status)
             ,">{}B{}f".format(nmb_scores,nmb_scores)
             ,">{}f{}B{}f".format(nmb_status,nmb_scores,nmb_scores),None)
+        self.test = test
         threading.Thread.__init__(self)
         self.start()
 
@@ -147,8 +148,8 @@ class send_results_thread(threading.Thread):
             self.results.close()
             print('sending results is stopped')
 
-    def put(self,status=(),scores=(),NoActf=False):
-        self.results.put([status + (scores*bool(not(NoActf))) ,NoActf])
+    def put(self,status=(),scores=(),Actf=False):
+        self.results.put([status + (scores*(Actf|self.test)) ,bool(not(Actf))])
 
     def close(self):
         self.key_ = False 
@@ -170,6 +171,7 @@ class rcv_results_thread(threading.Thread):
         self.cond = threading.Condition()
         self.nmb_scores = nmb_scores
         self.nmb_status = nmb_status
+        self.test = False
         self.event = threading.Event()
         self.event.clear()
         threading.Thread.__init__(self)
@@ -218,11 +220,12 @@ class rcv_results_thread(threading.Thread):
                 status = result[:self.nmb_status]
                 action_index = result[-self.nmb_scores*2:-self.nmb_scores]
                 scores = result[-self.nmb_scores:]
-            return count,status,(action_index,scores),NoAcf
+                self.test = NoAcf
+            return count,status,(action_index,scores),NoAcf,self.test
         else:
             with self.cond:
                 count = self.count
-            return count,(),((),()),False
+            return count,(),((),()),False,self.test
 
     def add(self):
         with self.cond:

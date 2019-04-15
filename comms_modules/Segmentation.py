@@ -156,9 +156,9 @@ class Cap_Process(mp.Process):
                         if self.rgb:
                             frame_ = cv2.cvtColor(frame_, cv2.COLOR_BGR2RGB)    # Converting from BGR to RGB  
                         send_frames.put(cv2.resize(frame_,(224,224)))
-                        count,status,score_,NoAcf=rcv_results.get()
-                        if (len(score_[0]) and not(NoAcf)):
-                            init = 1
+                        count,status,score_,NoAcf,test=rcv_results.get()
+                        if len(score_[0]):
+                            init = True
                             top5_actions.import_indecies_top_N_scores(score_)
                         if len(status):
                             s1 ="Delay of the processing is "+str(count)+" fps"
@@ -168,8 +168,9 @@ class Cap_Process(mp.Process):
                             s = (s1,s2,s3,s4)
                             add_status(frame_,s=s)
 
-
-                        if NoAcf:
+                        if test:
+                            top5_actions.add_scores(frame_,fontcolor=(0,0,255))
+                        elif NoAcf:
                             add_status(frame_,s=("No Action",),x=560,y=470)
                         elif init:
                             top5_actions.add_scores(frame_)
@@ -209,20 +210,18 @@ class Cap_Process(mp.Process):
 
 class mean():
     def __init__(self,max = 30):
-        self.queue = np.array([])
+        self.queue = deque(max*[False],maxlen=max)
         self.max = max
-    def mean(self,inp,dim=2):
-        if self.queue.size is 0:
-            self.queue = np.array(inp)
-            self.queue = np.expand_dims(self.queue , axis=0)
-        else:
-            self.queue = np.concatenate((np.expand_dims(inp , axis=0)
-                                         ,self.queue), axis=0)
-            if (self.queue.shape[0] >= self.max):
-                self.queue = self.queue[0:self.max-1]
-        return np.mean(self.queue, axis=0)
-
-
+        self.init = False
+        self.out = False
+        self.c = 0
+    def mean(self,inp):
+        self.c = min(self.c+1,self.max)
+        carry = self.queue.popleft()
+        inp = np.array(inp)
+        self.queue.append(inp)
+        self.out += inp-carry
+        return self.out/self.c
 
 
 # A method to add status on the image the frame_ is the incoming image and s1,s2,s3 are the txt to put on the image
