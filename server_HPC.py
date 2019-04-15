@@ -4,6 +4,7 @@ import threading
 import multiprocessing as mp
 from TopN import Top_N
 import numpy as np
+from random import randint
 
 def test_server():
 	try:
@@ -13,18 +14,20 @@ def test_server():
 		conn,T_thr = Network.set_server(port=6666,Tunnel=Tunnel_,n=1)
 		rcv_frames = Streaming.rcv_frames_thread(connection=conn[0])
 		send_results = Streaming.send_results_thread(connection=conn[1])
-		c = 0;
+		c = 0
+		NoActf = False 
 		while (rcv_frames.isAlive() and send_results.isAlive()):
 			frame,status = rcv_frames.get()
 			if frame is 0:
 				break          
-			if c % 50 == 0 and c != 0:
+			if c % 10 == 0 and c != 0:
 				scores = np.random.random(101)
 				top5_actions.import_scores(scores)
 				index,_,scores = top5_actions.get_top_N_actions()
-				send_results.put(status=status,scores=(*index,*scores))
+				NoActf = bool(randint(0,1))
+				send_results.put(status=status,scores=(*index,*scores),NoActf=NoActf)
 			else:
-				send_results.put(status=status)
+				send_results.put(status=status,NoActf=NoActf)
 			c +=1
 	except (KeyboardInterrupt,IOError,OSError) as e:
 		pass

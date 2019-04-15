@@ -132,11 +132,11 @@ class Cap_Process(mp.Process):
                 ip=self.ip,Tunnel=self.Tunnel)
             client2 = Network.set_client(port=self.port,
                 ip=self.ip,Tunnel=self.Tunnel)
-            vid_cap = cv2.VideoCapture(self.id_)
-            success, frame_ = vid_cap.read()
+            cam_cap = cv2.VideoCapture(self.id_)
+            success, frame_ = cam_cap.read()
             itern = cycle(self.N1*(1,)+self.N0*(0,))
             if not success:
-                vid_cap.release()
+                cam_cap.release()
                 send_frames.close()
                 self.frames.put(True)
                 return
@@ -157,8 +157,8 @@ class Cap_Process(mp.Process):
                         if self.rgb:
                             frame_ = cv2.cvtColor(frame_, cv2.COLOR_BGR2RGB)    # Converting from BGR to RGB  
                         send_frames.put(cv2.resize(frame_,(224,224)))
-                        count,status,score_=rcv_results.get()
-                        if len(score_[0]):
+                        count,status,score_,NoAcf=rcv_results.get()
+                        if (len(score_[0]) and not(NoAcf)):
                             init = 1
                             top5_actions.import_indecies_top_N_scores(score_)
                         if len(status):
@@ -168,11 +168,17 @@ class Cap_Process(mp.Process):
                             s4 = "The rate of sending data is "+str(status[1])+" KB/s"
                             s = (s1,s2,s3,s4)
                             add_status(frame_,s=s)
-                        if init:
+
+
+                        if NoAcf:
+                            add_status(frame_,s=("No Action",),x=560,y=470)
+                        elif init:
                             top5_actions.add_scores(frame_)
+                        else :
+                            add_status(frame_,s=('Start Recognition',),x=510,y=470)
                         self.frames.put(frame_)
         
-                success, frame_ = vid_cap.read()
+                success, frame_ = cam_cap.read()
         except (KeyboardInterrupt,IOError,OSError) as e :
             pass
 
@@ -183,7 +189,7 @@ class Cap_Process(mp.Process):
             rcv_results.close()
             client.close()
             print("The program cut the connection")
-            vid_cap.release()
+            cam_cap.release()
             print("The program broke the connection to the camera")
 
 
