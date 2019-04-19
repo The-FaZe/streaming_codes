@@ -216,6 +216,7 @@ class rcv_results_thread(threading.Thread):
                 status =()
                 action_index = result[:self.nmb_scores]
                 scores = result[self.nmb_scores:]
+                self.test = NoAcf
             else:
                 status = result[:self.nmb_status]
                 action_index = result[-self.nmb_scores*2:-self.nmb_scores]
