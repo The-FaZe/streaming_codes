@@ -7,7 +7,7 @@ from random import randint
 def test_server():
 	try:
 		test = True
-		Tunnel_ = True
+		Tunnel_ = False
 		classInd_file = 'UCF_lists/classInd.txt'
 		top5_actions = Top_N(classInd_file)
 		conn,T_thr = set_server(port=6666,Tunnel=Tunnel_,n=1)
