@@ -37,6 +37,7 @@ def test_server():
 		conn[0].close()
 		conn[1].close()
 		if Tunnel_:
-			Tun_sp.kill()
+			if not Tun_sp.pull():
+				Tun_sp.kill()
 if __name__ == '__main__':
 	test_server()
