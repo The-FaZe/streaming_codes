@@ -11,8 +11,9 @@
 source ~/data/anaconda3/bin/activate
 
 
-cd ~/data
+cd ~/data/tsn_paper/streaming_codes
 
 echo "Start Testing ..................................."
 
-python -u ~/data/streaming_codes/test.py
+python -u server_HPC.py
+
