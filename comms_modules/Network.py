@@ -14,9 +14,9 @@ def tunneling_cmd_hpc_server(user,path,local_port):
     s = "localhost:"+port+":localhost:"+port
     s=sp.run(["ssh","-R",s,"login01","-N","-f"])
     if path is None:
-        s="ssh -L {}:localhost:{} {}@login01.hpc.bibalex.org".format(local_port,port,user)
+        s="ssh -L {}:localhost:{} {}@login01.c2.hpc.bibalex.org".format(local_port,port,user)
     else:
-        s="ssh -L {}:localhost:{} {}@login01.hpc.bibalex.org -i {}".format(local_port,port,user,path)
+        s="ssh -L {}:localhost:{} {}@login01.c2.hpc.bibalex.org -i {}".format(local_port,port,user,path)
     print("copy the following command \n",s)
     return int(port),s
 
