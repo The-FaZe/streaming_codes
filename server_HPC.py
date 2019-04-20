@@ -10,7 +10,7 @@ def test_server():
 		Tunnel_ = False
 		classInd_file = 'UCF_lists/classInd.txt'
 		top5_actions = Top_N(classInd_file)
-		conn,T_thr = set_server(port=6666,Tunnel=Tunnel_,n=1)
+		conn,s = set_server(port=6666,Tunnel=Tunnel_,n=1,path=None,user = "alex039u4")
 		rcv_frames = rcv_frames_thread(connection=conn[0])
 		send_results = send_results_thread(connection=conn[1],test=test)
 		c = 0
@@ -36,6 +36,7 @@ def test_server():
 		send_results.close()
 		conn[0].close()
 		conn[1].close()
-
+		if Tunnel_:
+			s.kill()
 if __name__ == '__main__':
 	test_server()
