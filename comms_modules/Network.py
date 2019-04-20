@@ -8,39 +8,39 @@ from threading import Thread
 import subprocess as sp
 
 
- def tunneling_cmd_hpc_server(user,path,local_port):
-     port = sp.run(["shuf","-i8000-9999","-n1"],capture_output=True)
-     port =port.stdout.strip().decode()
-     s = "localhost:"+port+":localhost:"+port
-     s=sp.run(["ssh","-R",s,"login01","-N","-f"])
-     if path is None:
-         s="ssh -L {}:localhost:{} {}@login01.hpc.bibalex.org".format(local_port,port,user)
-     else:
-         s="ssh -L {}:localhost:{} {}@login01.hpc.bibalex.org -i {}".format(local_port,port,user,path)
-     print("copy the following command \n",s)
-     return port,s
+def tunneling_cmd_hpc_server(user,path,local_port):
+    port = sp.run(["shuf","-i8000-9999","-n1"],capture_output=True)
+    port =port.stdout.strip().decode()
+    s = "localhost:"+port+":localhost:"+port
+    s=sp.run(["ssh","-R",s,"login01","-N","-f"])
+    if path is None:
+        s="ssh -L {}:localhost:{} {}@login01.hpc.bibalex.org".format(local_port,port,user)
+    else:
+        s="ssh -L {}:localhost:{} {}@login01.hpc.bibalex.org -i {}".format(local_port,port,user,path)
+    print("copy the following command \n",s)
+    return port,s
 
 
 
 def set_server(port,n,Tunnel,user,path):
-     if Tunnel:
-         ip = "localhost"
-         port,s=tunneling_cmd_hpc_server(user=user,path=path,local_port=port) 
-     else:
-         ip =socket.gethostbyname(socket.gethostname())              # Getting the local ip of the server
-         s = None
-     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)    #specifying socket type is IPV4"socket.AF_INET" and TCP "SOCK_STREAM"
-     server_address = (ip,port)      # saving ip and port as tuple
-     sock.bind(server_address)       # attaching the socket to the pc (code)
-     print ('starting up on',server_address[0],':',server_address[1])
-     sock.listen(n)     # start waiting for 1 client to connection 
-     print('step#1')
-     connection, client_address = sock.accept() #accepting that client and hosting a connection with him
-     print('client_address is ',client_address[0],client_address[1])
-     connection2, client_address = sock.accept() #accepting that client and hosting a connection with him
-     print('client_address is ',client_address[0],client_address[1])
-     connection = (connection,connection2)
-     return connection,s  #returning the connection object for further use
+    if Tunnel:
+        ip = "localhost"
+        port,s=tunneling_cmd_hpc_server(user=user,path=path,local_port=port) 
+    else:
+        ip =socket.gethostbyname(socket.gethostname())              # Getting the local ip of the server
+        s = None
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)    #specifying socket type is IPV4"socket.AF_INET" and TCP "SOCK_STREAM"
+    server_address = (ip,port)      # saving ip and port as tuple
+    sock.bind(server_address)       # attaching the socket to the pc (code)
+    print ('starting up on',server_address[0],':',server_address[1])
+    sock.listen(n)     # start waiting for 1 client to connection 
+    print('step#1')
+    connection, client_address = sock.accept() #accepting that client and hosting a connection with him
+    print('client_address is ',client_address[0],client_address[1])
+    connection2, client_address = sock.accept() #accepting that client and hosting a connection with him
+    print('client_address is ',client_address[0],client_address[1])
+    connection = (connection,connection2)
+    return connection,s  #returning the connection object for further use
 
 
 
