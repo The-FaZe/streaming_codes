@@ -199,8 +199,6 @@ def First_step():
     send_results.close()
     conn[0].close()
     conn[1].close()
-    conn[1].close()
-    Tun_sp.kill()
     
 
   
