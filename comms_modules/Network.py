@@ -12,13 +12,13 @@ def tunneling_cmd_hpc_server(user,path,local_port):
     port = sp.run(["shuf","-i8000-9999","-n1"],capture_output=True)
     port =port.stdout.strip().decode()
     s = "localhost:"+port+":localhost:"+port
-    s=sp.run(["ssh","-R",s,"login01","-N","-f"])
+    tun_sp=sp.run(["ssh","-R",s,"login01","-N","-f"])
     if path is None:
-        s="ssh -L {}:localhost:{} {}@login01.c2.hpc.bibalex.org -L".format(local_port,port,user)
+        s="ssh -L {}:localhost:{} {}@login01.c2.hpc.bibalex.org -N".format(local_port,port,user)
     else:
-        s="ssh -L {}:localhost:{} {}@login01.c2.hpc.bibalex.org -L -i {}".format(local_port,port,user,path)
+        s="ssh -L {}:localhost:{} {}@login01.c2.hpc.bibalex.org -N -i {}".format(local_port,port,user,path)
     print("copy the following command \n",s)
-    return int(port),s
+    return int(port),tun_sp
 
 
 
