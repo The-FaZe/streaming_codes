@@ -5,12 +5,14 @@ from numpy.random import random
 from random import randint
 
 def test_server():
+	test = True
+	Tunnel_ = True
+	conn,transport = set_server(ip="0.0.0.0",port=6666,Tunnel=Tunnel_,n_conn=2,hostname= "login01")
+	if conn is None:
+		return 
 	try:
-		test = True
-		Tunnel_ = False
 		classInd_file = 'UCF_lists/classInd.txt'
 		top5_actions = Top_N(classInd_file)
-		conn,Tun_sp = set_server(port=6666,Tunnel=Tunnel_,n=1,path=None,user = "alex039u2")
 		rcv_frames = rcv_frames_thread(connection=conn[0])
 		send_results = send_results_thread(connection=conn[1],test=test)
 		c = 0
@@ -36,5 +38,7 @@ def test_server():
 		send_results.close()
 		conn[0].close()
 		conn[1].close()
+		if bool(transport):
+			transport.close()
 if __name__ == '__main__':
 	test_server()

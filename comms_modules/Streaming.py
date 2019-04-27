@@ -138,6 +138,7 @@ class send_results_thread(threading.Thread):
                 elif result[1]:
                     flag = flag | 0x80
                     flagb = pack(">B", flag)
+                    print(self.results.qsize())
                     self.connection.sendall(flagb)
                 else:
                     pass

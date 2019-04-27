@@ -6,7 +6,8 @@ import numpy as np
 import multiprocessing as mp
 from threading import Thread
 import subprocess as sp
-from paramiko.client import SSHClient,WarningPolicy
+from paramiko.client import SSHClient,AutoAddPolicy
+from paramiko.ssh_exception import *
 
 
 def tunneling_cmd_hpc_server(user,path,local_port):
@@ -23,25 +24,70 @@ def tunneling_cmd_hpc_server(user,path,local_port):
 
 
 
-def set_server(port,n,Tunnel,user,path):
+def set_server(ip,port,n_conn,Tunnel,hostname=None):
+    connection = []
+    transport = None
     if Tunnel:
-        ip = "localhost"
-        port,s=tunneling_cmd_hpc_server(user=user,path=path,local_port=port) 
+        
+        sshclient = SSHClient()
+        
+        sshclient.load_system_host_keys()
+        
+        sshclient.set_missing_host_key_policy(AutoAddPolicy())
+        
+        try:
+            sshclient.connect(hostname=hostname)
+        except(BadHostKeyException,SSHException
+            ,AuthenticationException) as e:
+            print("problem hapened ssh into {}".format(hostname))
+            raise e
+            sshclient.get_transport().close()
+            return None,None
+        try:
+            try:
+                transport = sshclient.get_transport()
+                port=transport.request_port_forward(address=ip,port=port)
+            except(SSHException):
+                print("the Node refused the Given port {}".format(port))
+                port = 0
+                port=transport.request_port_forward(address=ip,port=port)
+            print("port {}".format(port))
+            print ('starting up on {} : {}'.format(ip,port))
+            for i in range(n_conn):
+                connection.append(transport.accept(None))
+                print('client_address is {}:{} '.format(*connection[i].getpeername()))
+        except(BadHostKeyException,SSHException
+            ,AuthenticationException)as e:
+            print("an unexpected problem has been faced in request_port_forward")
+            for i in connection:
+                i.close()
+            transport.close()
+            return None ,None
+
+
+        #port,s=tunneling_cmd_hpc_server(user=user,path=path,local_port=port) 
     else:
-        ip =socket.gethostbyname(socket.gethostname())              # Getting the local ip of the server
-        s = None
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)    #specifying socket type is IPV4"socket.AF_INET" and TCP "SOCK_STREAM"
-    server_address = (ip,port)      # saving ip and port as tuple
-    sock.bind(server_address)       # attaching the socket to the pc (code)
-    print ('starting up on',server_address[0],':',server_address[1])
-    sock.listen(n)     # start waiting for 1 client to connection 
-    print('step#1')
-    connection, client_address = sock.accept() #accepting that client and hosting a connection with him
-    print('client_address is ',client_address[0],client_address[1])
-    connection2, client_address = sock.accept() #accepting that client and hosting a connection with him
-    print('client_address is ',client_address[0],client_address[1])
-    connection = (connection,connection2)
-    return connection,s  #returning the connection object for further use
+        #s = None
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)    #specifying socket type is IPV4"socket.AF_INET" and TCP "SOCK_STREAM"
+        server_address = (ip,port)      # saving ip and port as tuple
+        try:
+            sock.bind(server_address)       # attaching the socket to the pc (code)
+            print ('starting up on',server_address[0],':',server_address[1])
+            sock.listen(n_conn)             # start waiting for 1 client to connection 
+            for i in range(n_conn):
+                connection_, client_address = sock.accept() #accepting that client and hosting a connection with him
+                print('client_address is {}:{} '.format(*client_address))
+                connection.append(connection_)
+        except(OSError) as e:
+            print("Making a server Failed")
+            raise e
+            for i in connection:
+                i.close()
+            return None,None
+
+
+    print('The number of connections started successfully = {}'.format(n_conn)) # printing when the connection is successful 
+    return connection,transport  #returning the connection object for further use
 
 
 
@@ -50,27 +96,58 @@ def set_server(port,n,Tunnel,user,path):
 # A method to set the client part to set up the connection
 # (Ip is the ip of the server we want to connection with)
 # Port is the port that the server is listening on
-def set_client(port,ip="localhost",Tunnel=False,numb_conn=2):
+def set_client(ip,port,numb_conn,Tunnel,hostname=None,username=None,Key_path=None,passphrase=None):
     client = []
+    transport = None
     if Tunnel:
-        server_address = ("0.0.0.0",port)
+        server_address = (ip,port)
         sshclient = SSHClient()
         sshclient.load_system_host_keys()
-        sshclient.set_missing_host_key_policy(WarningPolicy())
-        sshclient.connect(hostname="login01.c2.hpc.bibalex.org",username="alex039u4",passphrase="Kaiki is the best grill even in monogatori fagoteri"
-            ,key_filename=r"C:\Users\PlebChan\AppData\Roaming\SPB_16.6\.ssh\id_rsa")
-        for i in range(numb_conn):
-            client.append(sshclient.get_transport().open_channel(kind='direct-tcpip',src_addr=server_address,dest_addr=server_address))
-            client[i].setblocking(True)
+        sshclient.set_missing_host_key_policy(AutoAddPolicy())
+        try:
+            sshclient.connect(hostname=hostname,username=username,passphrase=passphrase
+                ,key_filename=Key_path)
+            transport = sshclient.get_transport()
+        except(BadHostKeyException,SSHException
+            ,AuthenticationException) as e:
+            print("A problem trying to connection to the Host {}".format(hostname))
+            raise e
+            transport.close()
+            return None,None
+        try:
+            for i in range(numb_conn):
+                client.append(transport.open_channel(kind='direct-tcpip',src_addr=server_address,dest_addr=server_address))
+                client[i].setblocking(True)
+        except SSHException as e:
+            print("problem Has been faced trying to make direct-tcpip conneciton")
+            raise e
+            for i in client:
+                i.close()
+            sshclient.get_transport().close()
+            return None,None
+        except(KeyboardInterrupt):
+            for i in client:
+                i.close()
+            sshclient.get_transport().close()
+            return None,None
     else:
         server_address = (ip,port)
-        for i in range(numb_conn):
-            client.append(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
-            client[i].setblocking(True)
-            client[i].connect(server_address)
-    print('The {} connection has been started'.format(numb_conn)) # printing when the connection is successful 
+        try :
+            for i in range(numb_conn):
+                client.append(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+                client[i].setblocking(True)
+                client[i].connect(server_address)
+        except(OSError):
+            print("The connection #{} failed".format(i+1))
+            print("The process is stopping")
+            return None,None
+        except(KeyboardInterrupt):
+            for i in client:
+                i.close()
+            sshclient.get_transport().close()
+            return None,None
 
-    return client #returning the connection object for further use
+    return client,transport #returning the connection object for further use
 
 
 # A method to receive any kind of hex file knewing its size (msglen)

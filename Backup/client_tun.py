@@ -3,7 +3,7 @@ from time import sleep
 import paramiko
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 ip ="localhost"
-port = 45074
+port = 36485
 server_address = (ip,port)
 sshclient = paramiko.client.SSHClient()
 sshclient.load_system_host_keys()

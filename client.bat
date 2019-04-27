@@ -1,2 +1,4 @@
-python client_HPC.py  --n1 6 --n0 0 --ip 192.168.1.29 --tun --p 8855
+python client_HPC.py  --ip localhost --p 6666  --n1 6 --n0 0 --Ofps 30 --Nfps 30 ^
+--u alex039u4 --h login01.c2.hpc.bibalex.org  ^
+ --tun
  PAUSE 

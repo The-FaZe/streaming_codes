@@ -115,7 +115,8 @@ class Cap_Thread(threading.Thread):
 """
 class Cap_Process(mp.Process):
     
-    def __init__(self,fps_old,fps_new,id_,port,ip="",Tunnel=True,rgb=True,N1=1,N0=0):
+    def __init__(self,fps_old,fps_new,id_,port,ip="0.0.0.0",Tunnel=True,rgb=True,N1=1,N0=0
+        ,hostname=None,username=None,Key_path=None,passphrase=None):
         self.frames = mp.Queue(0)
         self.key = mp.Value('b',True)
         self.rgb = rgb
@@ -126,12 +127,19 @@ class Cap_Process(mp.Process):
         self.Tunnel = Tunnel
         self.N1=N1
         self.N0=N0
+        self.hostname=hostname
+        self.username=username
+        self.Key_path=Key_path
+        self.passphrase=passphrase
         mp.Process.__init__(self)
         self.start()
     def run(self):
+        client,transport = Network.set_client(ip=self.ip,port=self.port,numb_conn=2,Tunnel=self.Tunnel,
+            hostname=self.hostname,username=self.username,Key_path=self.Key_path,passphrase=self.passphrase)
+        if client is None:
+            self.frames.put(True)
+            return 0
         try:
-            client = Network.set_client(port=self.port,
-                ip=self.ip,Tunnel=self.Tunnel,numb_conn=2)
             cam_cap = cv2.VideoCapture(self.id_)
             success, frame_ = cam_cap.read()
             itern = cycle(self.N1*(1,)+self.N0*(0,))
@@ -200,6 +208,8 @@ class Cap_Process(mp.Process):
             rcv_results.close()
             print("The program cut the connection")
             cam_cap.release()
+            if bool(transport):
+                transport.close()
             print("The program broke the connection to the camera")
 
 
