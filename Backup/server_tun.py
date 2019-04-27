@@ -3,7 +3,7 @@ from time import sleep
 import paramiko
 
 print("start python code........")
-shclient = paramiko.client.SSHClient()
+sshclient = paramiko.client.SSHClient()
 sshclient.load_system_host_keys()
 sshclient.set_missing_host_key_policy(paramiko.client.WarningPolicy())
 transport=sshclient.connect(hostname="login01").get_transport()
