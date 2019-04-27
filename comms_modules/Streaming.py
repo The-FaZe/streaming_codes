@@ -1,6 +1,6 @@
 from . import Network, Segmentation
 import multiprocessing as mp
-from time import time
+from time import time,sleep
 import threading
 from cv2 import cvtColor,COLOR_BGR2RGB
 from socket import socket
@@ -91,6 +91,7 @@ class send_frames_thread(threading.Thread):
             while (self.key):
 
                 Network.send_frame(self.connection,self.frames.get())
+                sleep(0.005)
 
         except(KeyboardInterrupt,IOError,OSError) as e:
             pass
@@ -199,6 +200,7 @@ class rcv_results_thread(threading.Thread):
                     with self.cond:
                         self.NoActf = NoActf
                         self.test = test
+                        self.count -= 1
 
 
         except(KeyboardInterrupt,IOError,OSError) as e:

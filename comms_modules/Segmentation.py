@@ -20,7 +20,6 @@ class decision():
         L    = fpso//GCD                #The number of frames in 1 segment
         n    = fpsn//GCD                #The number of  snippets in 1 segment
 
-
         #Decision array is to determine keeping the frame or dropping it,
         #that number of ones determines number of (selected frames(snippets) - the very first frame) in a seg
         # converting the numpy array to list datatype (more efficient in this case)
@@ -64,6 +63,10 @@ class thrQueue():
         with self.cond_:
             self.cond_.notifyAll()
         self.queue_.clear()
+
+    def qsize(self):
+        with self.cond_:
+            return len(self.queue_)
         
         
 """
@@ -128,9 +131,7 @@ class Cap_Process(mp.Process):
     def run(self):
         try:
             client = Network.set_client(port=self.port,
-                ip=self.ip,Tunnel=self.Tunnel)
-            client2 = Network.set_client(port=self.port,
-                ip=self.ip,Tunnel=self.Tunnel)
+                ip=self.ip,Tunnel=self.Tunnel,numb_conn=2)
             cam_cap = cv2.VideoCapture(self.id_)
             success, frame_ = cam_cap.read()
             itern = cycle(self.N1*(1,)+self.N0*(0,))
@@ -144,12 +145,13 @@ class Cap_Process(mp.Process):
             classInd_file = 'UCF_lists/classInd.txt' #text file name
             top5_actions = Top_N(classInd_file)
 
-            send_frames = Streaming.send_frames_thread(client)
+            send_frames = Streaming.send_frames_thread(client[0])
 
-            rcv_results = Streaming.rcv_results_thread(connection=client2)
+            rcv_results = Streaming.rcv_results_thread(connection=client[1])
             score = ();
             initialized = False
-            s = ("No Status Received",)
+            s3 = "No Status Received"
+            s4 = "No Status Received"
             while (success and self.key.value and send_frames.isAlive() and rcv_results.isAlive()):
                 if self.index.index():
                     if next(itern):
@@ -161,19 +163,19 @@ class Cap_Process(mp.Process):
 
                 
                 count,status,score_,NoActf,test,New_out=rcv_results.get()
-                print(New_out)
                 if New_out[1]:
                     initialized = True
                     top5_actions.import_indecies_top_N_scores(score_)
 
 
                 if New_out[0]:
-                    s1 ="Delay of the processing is "+str(count)+" fps"
-                    s2 = "The number of waiting frames in buffer is "+str(self.frames.qsize())+" frame"
-                    s3 = "the rate of sending frames is "+str(status[0])+" fps"
-                    s4 = "The rate of sending data is "+str(status[1])+" KB/s"
-                    s = (s1,s2,s3,s4)
+                    s3 = "the rate of sending frames is {} fps".format(status[0])
+                    s4 = "The rate of sending data is {} KB/s".format(status[1])
+                s1 = "Delay of the processing is {} frame".format(count)
+                s2 = "The number of waiting frames in buffer is {} frame ".format(self.frames.qsize())
+                s5 = "the number of waiting frames to be sent is {} frame".format(send_frames.frames.qsize())
 
+                s = (s1,s2,s3,s4,s5)
 
                 add_status(frame_,s=s)
 
@@ -196,7 +198,6 @@ class Cap_Process(mp.Process):
             self.frames.put(True)
             send_frames.close()
             rcv_results.close()
-            client.close()
             print("The program cut the connection")
             cam_cap.release()
             print("The program broke the connection to the camera")
@@ -235,7 +236,7 @@ class mean():
 
 # A method to add status on the image the frame_ is the incoming image and s1,s2,s3 are the txt to put on the image
 
-def add_status(frame_,s=(),x=5,y=10,i=20,font = cv2.FONT_HERSHEY_SIMPLEX
+def add_status(frame_,s=(),x=5,y=12,i=20,font = cv2.FONT_HERSHEY_SIMPLEX
     ,fontScale = 0.4,fontcolor=(255,255,255),lineType=1):
     c = 0
     for s_ in s:

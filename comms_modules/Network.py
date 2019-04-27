@@ -6,6 +6,7 @@ import numpy as np
 import multiprocessing as mp
 from threading import Thread
 import subprocess as sp
+from paramiko.client import SSHClient,WarningPolicy
 
 
 def tunneling_cmd_hpc_server(user,path,local_port):
@@ -49,11 +50,26 @@ def set_server(port,n,Tunnel,user,path):
 # A method to set the client part to set up the connection
 # (Ip is the ip of the server we want to connection with)
 # Port is the port that the server is listening on
-def set_client(port,ip="",Tunnel=True):
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#specifying socket type is IPV4"socket.AF_INET" and TCP "SOCK_STREAM"
-    server_address = (ip,port)# saving ip and port of the server as tuple
-    client.connect(server_address)#Trying to connect to a server with specified Ip and port
-    print('The connection has been started') # printing when the connection is successful 
+def set_client(port,ip="localhost",Tunnel=False,numb_conn=2):
+    client = []
+    if Tunnel:
+        server_address = ("0.0.0.0",port)
+        sshclient = SSHClient()
+        sshclient.load_system_host_keys()
+        sshclient.set_missing_host_key_policy(WarningPolicy())
+        sshclient.connect(hostname="login01.c2.hpc.bibalex.org",username="alex039u4",passphrase="Kaiki is the best grill even in monogatori fagoteri"
+            ,key_filename=r"C:\Users\PlebChan\AppData\Roaming\SPB_16.6\.ssh\id_rsa")
+        for i in range(numb_conn):
+            client.append(sshclient.get_transport().open_channel(kind='direct-tcpip',src_addr=server_address,dest_addr=server_address))
+            client[i].setblocking(True)
+    else:
+        server_address = (ip,port)
+        for i in range(numb_conn):
+            client.append(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+            client[i].setblocking(True)
+            client[i].connect(server_address)
+    print('The {} connection has been started'.format(numb_conn)) # printing when the connection is successful 
+
     return client #returning the connection object for further use
 
 
