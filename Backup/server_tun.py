@@ -17,5 +17,4 @@ message = 'Have a nice day'
 message = message.encode('utf-8')
 print (data)
 connection.sendall(message)
-sleep(10)
 connection.close()
