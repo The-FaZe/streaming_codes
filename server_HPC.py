@@ -6,7 +6,7 @@ from random import randint
 
 def test_server():
 	test = True
-	Tunnel_ = True
+	Tunnel_ = False
 	conn,transport = set_server(ip="0.0.0.0",port=6666,Tunnel=Tunnel_,n_conn=2,hostname= "login01")
 	if conn is None:
 		return 
@@ -19,11 +19,12 @@ def test_server():
 		Actf = True 
 		while (rcv_frames.isAlive() and send_results.isAlive()):
 
-
 			if rcv_frames.CheckReset():
 				c = 0
 				rcv_frames.ConfirmReset()
+
 			frame,status = rcv_frames.get()
+
 			if frame is 0:
 				break
 
@@ -32,15 +33,19 @@ def test_server():
 
 			if c % 10 == 0 and c != 0:
 				scores = random(101)
+
 				top5_actions.import_scores(scores)
+
 				index,_,scores = top5_actions.get_top_N_actions()
+
 				Actf = bool(randint(0,1))
-				print(Actf)
+
 				send_results.put(status=status,scores=(*index,*scores),Actf=Actf)
+
 			else:
 				send_results.put(status=status,Actf=Actf)
+
 			c +=1
-			print(c)
 	except (KeyboardInterrupt,IOError,OSError) as e:
 		pass
 	finally:

@@ -43,6 +43,7 @@ class rcv_frames_thread(threading.Thread):
 
                 x = time() # start recording the time of receiving each frame 
 
+
                 frame_,msglen = Network.recv_frame(self.connection) # receiving a frame
 
                 msglen_sum += msglen # updating the size of the total frames received
@@ -52,8 +53,8 @@ class rcv_frames_thread(threading.Thread):
                     self.active_reset = True
                     
                     self.frames.reset()
-
                     self.WaitConfirmReset()
+                    self.frames.confirm()
 
                 else:
                 #adding the (frame received,the size of the frame and the total time it took to receive it) in the shared memory buffer
@@ -88,18 +89,23 @@ class rcv_frames_thread(threading.Thread):
                     self.cond.wait()
 
     def CheckReset(self):
-        return self.active_reset
+        with self.cond:
+            return self.active_reset
 
 
     #The method is responsible for consuming data from the queue ,decoding it
     # printing status on it and converting it into RGB if desired 
     def get(self,rgb=True):
-        if self.active_reset:
+        if self.CheckReset():
             return None,None
         else:
             frame_ = self.frames.get() #blocking until getting the data with time out of 60 s 
             if frame_ is 0:
                 return 0,()
+            if frame_ is None:
+                print(self.CheckReset())
+                if self.CheckReset():
+                    return None,None
             frame_ , msglen , spf = frame_
             frame_ = Network.decode_frame(frame_) #decoding the frames
             if rgb:
@@ -139,6 +145,7 @@ class send_frames_thread(threading.Thread):
                     self.active_reset = True
                     self.frames.reset()
                     Network.send_frame(connection=self.connection,img=None,Quality=self.encode_quality,active_reset=self.active_reset)
+                    self.frames.confirm()
                 else:
                     self.active_reset = False 
                     Network.send_frame(connection=self.connection,img=self.frames.get(),Quality=self.encode_quality,active_reset=self.active_reset)
@@ -206,6 +213,7 @@ class send_results_thread(threading.Thread):
 
     def reset(self):
         results.reset()
+        self.confirm()
 
     def put(self,status=(),scores=(),Actf=False):
         self.results.put([status + (scores*(Actf|self.test)) ,bool(not(Actf))])

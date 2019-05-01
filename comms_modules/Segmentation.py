@@ -46,12 +46,15 @@ class thrQueue():
         self.cond_ = threading.Condition()
         self.queue_ = deque()
         self.clear_ = False
+        self.reset_ = False
 
     def get(self):
         with self.cond_:
             while not len(self.queue_)  :
                 if self.clear_:
                     return 0
+                if self.reset_:
+                    return None
                 self.cond_.wait()
             item = self.queue_.popleft()
         return item
@@ -68,9 +71,13 @@ class thrQueue():
         self.queue_.clear()
 
     def reset(self):
-        self.close()
         with self.cond_:
-            self.clear_ = False
+            self.reset_=True
+            self.cond_.notifyAll()
+        self.queue_.clear()
+    
+    def confirm(self):
+        self.reset_ = False
 
 
     def qsize(self):
