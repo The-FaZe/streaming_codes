@@ -176,26 +176,45 @@ def recv_msg(connection,msglen,bufferlen):
 
 
 
+
 # A method to send frame from either end of the communication with specifying the connection object
 # the img input is a pure image without any encoding
 # the encoding used here is JPEG then getting the size of the encoded image
 # Then sending the size of the image in 4 bytes-size-msg then sending the actual encoded img afterwards
-def send_frame(connection,img,Quality=90):
-    encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),Quality] # object of the parameters of the encoding (JPEG with 90% quality) 
-    _ ,enc_img = cv2.imencode('.jpg',img,encode_param) # encoding the img in JPEG with specified quality 
-    buff = len(enc_img) # Getting the len of the encoded image  
-    buff = pack('>L',buff) #converting the size into 4 bytes(struct) length msg ,(L means unsigned long),(> means big endian)
-    enc_img1 = enc_img.tostring() #converting the encoded image array into bytes(struct) of the actual memory
-    connection.sendall(buff) #sending the size of the frame(img)
-    connection.sendall(enc_img1)#sending the actual img 
+def send_frame(connection,img,Quality=90,active_reset=False):
+    if active_reset :
+        buff = pack('>L',0)
+        connection.sendall(buff)
+        confirmation=recv_msg(connection,1,1)
+        if confirmation != b'\xff':
+            print("the received confirmation is not right")
+            raise OSError
+
+    else:
+        encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),Quality] # object of the parameters of the encoding (JPEG with 90% quality) 
+        _ ,enc_img = cv2.imencode('.jpg',img,encode_param) # encoding the img in JPEG with specified quality 
+        buff = len(enc_img) # Getting the len of the encoded image  
+        if buff is 0:
+            print("the frame is empty") 
+            raise OSError
+        buff = pack('>L',buff) #converting the size into 4 bytes(struct) length msg ,(L means unsigned long),(> means big endian)
+        enc_img1 = enc_img.tostring() #converting the encoded image array into bytes(struct) of the actual memory
+        connection.sendall(buff) #sending the size of the frame(img)
+        connection.sendall(enc_img1)#sending the actual img 
 
 
 # A method to recieved a frame from either side of the connection
 # connecion is the socket object of the connection from either side(receiving end)
 def recv_frame(connection):
-    msglen = recv_msg(connection,4,4)# sending the lenght of the enc
-    msglen = unpack(">L", msglen)[0]#converting the size again into an unsigned Long 
-    frame = recv_msg(connection,msglen,2048)# receiving the complete frame with packet maximum of 2.048 KB and with len of the received length 
+    msglen = recv_msg(connection,4,4) # sending the lenght of the enc
+    msglen = unpack(">L", msglen)[0] #converting the size again into an unsigned Long 
+
+    if msglen is 0:
+        frame = None
+    else:
+        frame = recv_msg(connection,msglen,2048) # receiving the complete frame with packet maximum of 2.048 KB and with len of the received length 
+
+
     return frame,msglen # returning the frame as bytes and its length
 
 

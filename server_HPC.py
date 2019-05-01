@@ -18,9 +18,18 @@ def test_server():
 		c = 0
 		Actf = True 
 		while (rcv_frames.isAlive() and send_results.isAlive()):
+
+
+			if rcv_frames.CheckReset():
+				c = 0
+				rcv_frames.ConfirmReset()
 			frame,status = rcv_frames.get()
 			if frame is 0:
-				break          
+				break
+
+			if frame is None:
+				continue
+
 			if c % 10 == 0 and c != 0:
 				scores = random(101)
 				top5_actions.import_scores(scores)
@@ -31,6 +40,7 @@ def test_server():
 			else:
 				send_results.put(status=status,Actf=Actf)
 			c +=1
+			print(c)
 	except (KeyboardInterrupt,IOError,OSError) as e:
 		pass
 	finally:

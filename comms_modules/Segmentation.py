@@ -37,19 +37,22 @@ class decision():
             shuffle(self.array)             # Shuffle the array to select in diferent locations 
         return index_
 
+
+
+
 class thrQueue():
     
     def __init__(self):
         self.cond_ = threading.Condition()
         self.queue_ = deque()
-        self.exit_ = False
+        self.clear_ = False
 
     def get(self):
         with self.cond_:
             while not len(self.queue_)  :
-                self.cond_.wait()
-                if self.exit_:
+                if self.clear_:
                     return 0
+                self.cond_.wait()
             item = self.queue_.popleft()
         return item
         
@@ -59,14 +62,21 @@ class thrQueue():
             self.cond_.notifyAll()
 
     def close(self):
-        self.exit_=True
         with self.cond_:
+            self.clear_=True
             self.cond_.notifyAll()
         self.queue_.clear()
+
+    def reset(self):
+        self.close()
+        with self.cond_:
+            self.clear_ = False
+
 
     def qsize(self):
         with self.cond_:
             return len(self.queue_)
+
         
         
 """
@@ -115,12 +125,14 @@ class Cap_Thread(threading.Thread):
 """
 class Cap_Process(mp.Process):
     
-    def __init__(self,fps_old,fps_new,id_,port,ip="0.0.0.0",Tunnel=True,rgb=True,N1=1,N0=0
+    def __init__(self,fps_old,fps_new,id_,port,ip="0.0.0.0",reset_threshold=30,encode_quality=90,Tunnel=True,rgb=True,N1=1,N0=0
         ,hostname=None,username=None,Key_path=None,passphrase=None):
         self.frames = mp.Queue(0)
         self.key = mp.Value('b',True)
         self.rgb = rgb
         self.index =decision(fps_old,fps_new)
+        self.reset_threshold=reset_threshold
+        self.encode_quality = encode_quality
         self.id_ =id_
         self.port = port
         self.ip = ip
@@ -134,12 +146,15 @@ class Cap_Process(mp.Process):
         mp.Process.__init__(self)
         self.start()
     def run(self):
+        active_reset = False
         client,transport = Network.set_client(ip=self.ip,port=self.port,numb_conn=2,Tunnel=self.Tunnel,
             hostname=self.hostname,username=self.username,Key_path=self.Key_path,passphrase=self.passphrase)
         if client is None:
             self.frames.put(True)
             return 0
+        
         try:
+
             cam_cap = cv2.VideoCapture(self.id_)
             success, frame_ = cam_cap.read()
             itern = cycle(self.N1*(1,)+self.N0*(0,))
@@ -153,7 +168,7 @@ class Cap_Process(mp.Process):
             classInd_file = 'UCF_lists/classInd.txt' #text file name
             top5_actions = Top_N(classInd_file)
 
-            send_frames = Streaming.send_frames_thread(client[0])
+            send_frames = Streaming.send_frames_thread(connection=client[0],reset_threshold=self.reset_threshold,encode_quality=self.encode_quality)
 
             rcv_results = Streaming.rcv_results_thread(connection=client[1])
             score = ();
@@ -161,42 +176,47 @@ class Cap_Process(mp.Process):
             s3 = "No Status Received"
             s4 = "No Status Received"
             while (success and self.key.value and send_frames.isAlive() and rcv_results.isAlive()):
-                if self.index.index():
-                    if next(itern):
-                        rcv_results.add()
-                        if self.rgb:
-                            frame_ = cv2.cvtColor(frame_, cv2.COLOR_BGR2RGB)    # Converting from BGR to RGB  
-                        send_frames.put(cv2.resize(frame_,(224,224)))
+                if not send_frames.Actreset() :
+                    if self.index.index():
+                        if next(itern):
+                            rcv_results.add()
+                            if self.rgb:
+                                frame_ = cv2.cvtColor(frame_, cv2.COLOR_BGR2RGB)    # Converting from BGR to RGB  
+                            send_frames.put(cv2.resize(frame_,(224,224)))
 
 
+                    
+                    count,status,score_,NoActf,test,New_out=rcv_results.get()
+                    if New_out[1]:
+                        initialized = True
+                        top5_actions.import_indecies_top_N_scores(score_)
+
+
+                    if New_out[0]:
+                        s3 = "the rate of sending frames is {} fps".format(status[0])
+                        s4 = "The rate of sending data is {} KB/s".format(status[1])
+                    s1 = "Delay of the processing is {} frame".format(count)
+                    s2 = "The number of waiting frames in buffer is {} frame ".format(self.frames.qsize())
+                    s5 = "the number of waiting frames to be sent is {} frame".format(send_frames.frames.qsize())
+
+                    s = (s1,s2,s3,s4,s5)
+
+                    add_status(frame_,s=s)
+
+                    if test and NoActf:
+                        top5_actions.add_scores(frame_,fontcolor=(0,0,255))
+                    elif NoActf:
+                        add_status(frame_,s=("No Assigned Action Detected",),x=450,y=470)
+                    elif initialized:
+                        top5_actions.add_scores(frame_)
+                    else :
+                        add_status(frame_,s=('Start Recognition',),x=510,y=470)
+                else:
+                    initialized = False
+                    rcv_results.reset()
+                    add_status(frame_,s=('Reseting',),x=510,y=470)
                 
-                count,status,score_,NoActf,test,New_out=rcv_results.get()
-                if New_out[1]:
-                    initialized = True
-                    top5_actions.import_indecies_top_N_scores(score_)
-
-
-                if New_out[0]:
-                    s3 = "the rate of sending frames is {} fps".format(status[0])
-                    s4 = "The rate of sending data is {} KB/s".format(status[1])
-                s1 = "Delay of the processing is {} frame".format(count)
-                s2 = "The number of waiting frames in buffer is {} frame ".format(self.frames.qsize())
-                s5 = "the number of waiting frames to be sent is {} frame".format(send_frames.frames.qsize())
-
-                s = (s1,s2,s3,s4,s5)
-
-                add_status(frame_,s=s)
-
-                if test and NoActf:
-                    top5_actions.add_scores(frame_,fontcolor=(0,0,255))
-                elif NoActf:
-                    add_status(frame_,s=("No Assigned Action Detected",),x=450,y=470)
-                elif initialized:
-                    top5_actions.add_scores(frame_)
-                else :
-                    add_status(frame_,s=('Start Recognition',),x=510,y=470)
                 self.frames.put(frame_)
-        
                 success, frame_ = cam_cap.read()
         except (KeyboardInterrupt,IOError,OSError) as e :
             pass
