@@ -195,12 +195,12 @@ class send_results_thread(threading.Thread):
                     self.connection.sendall(flagb)
                     results_ = pack(self.fmb[flag],*result[0])
                     self.connection.sendall(results_)
-                    print(self.results.qsize())
+                    #print(self.results.qsize())
                 elif result[1]:
                     flag = flag | 0x80
                     flagb = pack(">B", flag)
                     self.connection.sendall(flagb)
-                    print(self.results.qsize())
+                    #print(self.results.qsize())
                 else:
                     pass
         except(KeyboardInterrupt,IOError,OSError) as e:
