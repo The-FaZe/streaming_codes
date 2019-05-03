@@ -43,46 +43,62 @@ class decision():
 class thrQueue():
     
     def __init__(self):
-        self.cond_ = threading.Condition()
-        self.queue_ = deque()
+        self.cond = threading.Condition(threading.RLock())
+        self.count_ = 0
+        self.queue = deque()
         self.clear_ = False
         self.reset_ = False
 
     def get(self):
-        with self.cond_:
-            while not len(self.queue_)  :
-                if self.clear_:
-                    return 0
-                if self.reset_:
-                    return None
-                self.cond_.wait()
-            item = self.queue_.popleft()
+        with self.cond:
+            if self.clear_:
+                item = 0
+            elif self.reset_:
+                item = None
+            else:
+                while(self.count_ <= 0):
+                    self.cond.wait()
+                    if (self.clear_|self.reset_):
+                        break
+                if(self.clear_|self.reset_):
+                    item = self.get()
+                else:
+                    item = self.queue.popleft()
+                    self.count_ -= 1
         return item
         
     def put(self,item):
-        with self.cond_:
-            self.queue_.append(item)
-            self.cond_.notifyAll()
+        with self.cond:
+            if (self.clear_|self.reset_):
+                pass
+            else:
+                self.queue.append(item)
+                self.count_ += 1
+                self.cond.notify() 
+
 
     def close(self):
-        with self.cond_:
-            self.clear_=True
-            self.cond_.notifyAll()
-        self.queue_.clear()
+        with self.cond:
+            self.clear_ = True
+            self.queue.clear()
+            self.cond.notify()
 
     def reset(self):
-        with self.cond_:
+        with self.cond:
             self.reset_=True
-            self.cond_.notifyAll()
-        self.queue_.clear()
+            self.queue.clear()
+            self.cond.notify()
     
     def confirm(self):
-        self.reset_ = False
+        with self.cond:
+            self.reset_ = False
+            self.count_ = 0
 
 
     def qsize(self):
-        with self.cond_:
-            return len(self.queue_)
+        with self.cond:
+            qs = self.count_
+        return qs
 
         
         

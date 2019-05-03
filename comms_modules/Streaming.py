@@ -22,7 +22,7 @@ class rcv_frames_thread(threading.Thread):
 
         self.active_reset = False
 
-        self.cond = threading.Condition()
+        self.cond = threading.Condition(threading.Lock())
 
         threading.Thread.__init__(self)
 
@@ -90,7 +90,8 @@ class rcv_frames_thread(threading.Thread):
 
     def CheckReset(self):
         with self.cond:
-            return self.active_reset
+            ar =  self.active_reset
+        return ar
 
 
     #The method is responsible for consuming data from the queue ,decoding it
@@ -235,7 +236,7 @@ class rcv_results_thread(threading.Thread):
             ,">{}f{}B{}f".format(nmb_status,nmb_scores,nmb_scores),None)
         self.count = 0
         self.result_ = ()
-        self.cond = threading.Condition()
+        self.cond = threading.Condition(threading.Lock())
         self.nmb_scores = nmb_scores
         self.nmb_status = nmb_status
         self.test = False
@@ -305,8 +306,14 @@ class rcv_results_thread(threading.Thread):
     def get(self):
         with self.cond:
             New_out = self.New_out 
+            count = self.count
+            status = self.status
+            action_index =self.action_index
+            scores = self.scores
+            NoActf = self.NoActf
+            test = self.test
             self.New_out = [False,False] 
-            return self.count,self.status,[self.action_index,self.scores],self.NoActf,self.test,New_out
+        return count,status,[action_index,scores],NoActf,test,New_out
 
 
 
