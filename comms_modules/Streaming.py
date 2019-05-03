@@ -2,7 +2,7 @@ from . import Network, Segmentation
 import multiprocessing as mp
 from time import time,sleep
 import threading
-from cv2 import cvtColor,COLOR_BGR2RGB
+from cv2 import cvtColor,COLOR_BGR2RGB,IMWRITE_JPEG_QUALITY,imencode
 from socket import socket
 from struct import pack,unpack,calcsize
 
@@ -136,6 +136,7 @@ class send_frames_thread(threading.Thread):
         self.encode_quality=encode_quality
         self.reset_threshold=reset_threshold
         self.active_reset = False
+        self.encode_param=[int(IMWRITE_JPEG_QUALITY),encode_quality] # object of the parameters of the encoding (JPEG with 90% quality) 
         threading.Thread.__init__(self)
         self.start()
 
@@ -145,11 +146,11 @@ class send_frames_thread(threading.Thread):
                 if self.frames.qsize() >= self.reset_threshold:
                     self.active_reset = True
                     self.frames.reset()
-                    Network.send_frame(connection=self.connection,img=None,Quality=self.encode_quality,active_reset=self.active_reset)
+                    Network.send_frame(connection=self.connection,img=None,active_reset=self.active_reset)
                     self.frames.confirm()
                 else:
                     self.active_reset = False 
-                    Network.send_frame(connection=self.connection,img=self.frames.get(),Quality=self.encode_quality,active_reset=self.active_reset)
+                    Network.send_frame(connection=self.connection,img=self.frames.get(),active_reset=self.active_reset)
 
         except(KeyboardInterrupt,IOError,OSError) as e:
             pass
@@ -160,6 +161,7 @@ class send_frames_thread(threading.Thread):
 
     def put(self,frame):
         if not self.active_reset:
+            _ ,frame = imencode('.jpg',frame,self.encode_param) # encoding the img in JPEG with specified quality 
             self.frames.put(frame)
 
     def Actreset(self):
