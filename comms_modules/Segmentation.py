@@ -216,28 +216,31 @@ class Cap_Process(mp.Process):
 
 
                     if New_out[0]:
-                        s3 = "the rate of sending frames is {} fps".format(status[0])
-                        s4 = "The rate of sending data is {} KB/s".format(status[1])
-                    s1 = "Delay of the processing is {} frame".format(count)
-                    s2 = "The number of waiting frames in buffer is {} frame ".format(self.frames.qsize())
-                    s5 = "the number of waiting frames to be sent is {} frame".format(send_frames.frames.qsize())
+                        s3 = "the rate of sending frames is {0:.2f} fps".format(status[0])
+                        s4 = "The rate of sending data is {0:.2f} KB/s".format(status[1])
+                    s1 = "UP/Down delay {0:1d} frame".format(int(count))
+                    #s2 = "The number of waiting frames in buffer is {0:.2f} frame ".format(self.frames.qsize())
+                    s5 = "Buffered frames {0:1d} frame".format(int(send_frames.frames.qsize()))
 
-                    s = (s1,s2,s3,s4,s5)
-
-                    add_status(frame_,s=s)
+                    s = (s1,s3,s4,s5)
+                    frame_=cv2.pyrUp(frame_)
+                    alpha = 0.3
+                    font=cv2.FONT_HERSHEY_TRIPLEX
+                    y=frame_.shape[0]-15
+                    add_status(frame_,s=s,font=font,thickness=5,lineType=2,fontScale=1.25,fontcolor=(0,0,0),box_flag=True,boxcolor=(200,200,200,0.1),x=15,y=30,alpha=alpha)
 
                     if test and NoActf:
-                        top5_actions.add_scores(frame_,fontcolor=(0,0,255))
+                        top5_actions.add_scores(frame_,font=font,thickness=5,lineType=2,fontScale=1.6,fontcolor=(0,0,255),x=5,y=y,box_flag=True,boxcolor=(200,200,200),final_action_f=True,alpha=alpha,x_mode='center')
                     elif NoActf:
-                        add_status(frame_,s=("No Assigned Action Detected",),x=450,y=470)
+                        add_status(frame_,s=("No Assigned Action Detected",),x=5,y=y,font=font,thickness=5,fontScale=1.6,fontcolor=(0,0,255),box_flag=True,boxcolor=(200,200,200),lineType=2,alpha=alpha,x_mode='center')
                     elif initialized:
-                        top5_actions.add_scores(frame_)
+                        top5_actions.add_scores(frame_,font=font,thickness=5,lineType=2,fontScale=1.6,fontcolor=(0,0,0),x=5,y=y,box_flag=True,boxcolor=(200,200,200),final_action_f=True,alpha=alpha,x_mode='center')
                     else :
-                        add_status(frame_,s=('Start Recognition',),x=510,y=470)
+                        add_status(frame_,s=('Start Recognition',),x=5,y=y,font=font,thickness=1,lineType=2,fontScale=1.6,fontcolor=(0,0,0),boxcolor=(200,200,200),alpha=alpha,x_mode='center')
                 else:
                     initialized = False
                     rcv_results.reset()
-                    add_status(frame_,s=('Reseting',),x=510,y=470)
+                    add_status(frame_,s=('Reseting',),x=5,y=y,font=font,thickness=1,lineType=2,fontScale=1.6,fontcolor=(0,0,255),boxcolor=(200,200,200),alpha=alpha,x_mode='center')
                 
                 self.frames.put(frame_)
                 success, frame_ = cam_cap.read()
@@ -289,11 +292,36 @@ class mean():
 
 # A method to add status on the image the frame_ is the incoming image and s1,s2,s3 are the txt to put on the image
 
-def add_status(frame_,s=(),x=5,y=12,i=20,font = cv2.FONT_HERSHEY_SIMPLEX
-    ,fontScale = 0.4,fontcolor=(255,255,255),lineType=1):
-    c = 0
+def add_status(frame_,s=(),x=5,y=12,font = cv2.FONT_HERSHEY_SIMPLEX
+    ,fontScale = 0.4,fontcolor=(255,255,255),lineType=1,thickness=3,box_flag=True
+    ,alpha = 0.4,boxcolor=(129, 129, 129),x_mode=None):
+    l = 0
+    if x_mode is 'center':
+        x=frame_.shape[1]//2
+    elif x_mode is 'left':
+        x=frame_.shape[1]
     for s_ in s:
-        l = i*c
-        cv2.putText(frame_,s_, (x,y+l) 
-            ,font, fontScale, fontcolor, lineType)
-        c += 1
+        origin=np.array([x,y+l])
+        y_c = add_box(frame=frame_ ,text=s_ ,origin=origin, font=font, fontScale=fontScale
+            ,thickness=thickness ,alpha=alpha ,enable=box_flag,color=boxcolor,x_mode=x_mode)
+        cv2.putText(frame_,s_, tuple(origin) 
+            ,font, fontScale, fontcolor, lineType,thickness)
+        l += y_c
+
+
+def add_box(frame,text,origin,font,color,fontScale=1,thickness=1,alpha=0.4,enable=True,x_mode=None):
+    box_dim = cv2.getTextSize(text,font,fontScale,thickness)
+    if x_mode is 'center':
+        origin[:] = origin - np.array([box_dim[0][0]//2,0])
+    elif x_mode is 'left':
+        origin[:] = origin - np.array([box_dim[0][0]+2,0])
+    pt1 = origin - np.array([0,box_dim[0][1]])
+    pt2 = pt1+box_dim[0]+np.array([0,box_dim[0][1]//4+thickness])
+    if enable:
+        overlay = frame.copy()
+        cv2.rectangle(overlay,tuple(pt1),tuple(pt2),color,-1)  # A filled rectangle
+
+        # Following line overlays transparent rectangle over the image
+        frame[:] = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
+    return pt2[1]-pt1[1]+1
+

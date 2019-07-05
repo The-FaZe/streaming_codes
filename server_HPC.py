@@ -5,7 +5,7 @@ from numpy.random import random
 from random import randint
 
 def test_server():
-	test = True
+	test = False
 	Tunnel_ = False
 	conn,transport = set_server(ip="0.0.0.0",port=6666,Tunnel=Tunnel_,n_conn=2,hostname= "login01")
 	if conn is None:
@@ -40,10 +40,10 @@ def test_server():
 
 				Actf = bool(randint(0,1))
 
-				send_results.put(status=status,scores=(*index,*scores),Actf=Actf)
+				send_results.put(status=(),scores=(*index,*scores),Actf=Actf)
 
 			else:
-				send_results.put(status=status,Actf=Actf)
+				send_results.put(status=(),Actf=Actf)
 
 			c +=1
 	except (KeyboardInterrupt,IOError,OSError) as e:
