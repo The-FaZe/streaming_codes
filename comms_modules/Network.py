@@ -27,7 +27,7 @@ def tunneling_cmd_hpc_server(user,path,local_port):
 
 
 
-def set_server(ip,port,n_conn,Tunnel,hostname=None):
+def set_server(ip,port,n_conn,Tunnel,hostname=None,username=None):
     """
     this method is responsible for establishing a server(listnening for connection) 
     In a direct LAN enviroment if Tunnel was False; hostname isn't needed
@@ -45,7 +45,7 @@ def set_server(ip,port,n_conn,Tunnel,hostname=None):
         sshclient.set_missing_host_key_policy(AutoAddPolicy())
         
         try:
-            sshclient.connect(hostname=hostname)
+            sshclient.connect(hostname=hostname,username=username)
         except(BadHostKeyException,SSHException
             ,AuthenticationException) as e:
             print("problem hapened ssh into {}".format(hostname))
@@ -210,14 +210,15 @@ def send_frame(connection,img,active_reset=False):
     else:
         if img is 0:
             return
-        buff = len(img) # Getting the len of the encoded image
-        if buff is 0:
+        buff_d = len(img) # Getting the len of the encoded image
+        if buff_d is 0:
             print("the frame is empty") 
             raise OSError 
-        buff = pack('>L',buff) #converting the size into 4 bytes(struct) length msg ,(L means unsigned long),(> means big endian)
+        buff = pack('>L',buff_d) #converting the size into 4 bytes(struct) length msg ,(L means unsigned long),(> means big endian)
         img = img.tostring()   #converting the encoded image array into bytes(struct) of the actual memory
         connection.sendall(buff) #sending the size of the frame(img)
         connection.sendall(img)  #sending the actual img 
+        return buff_d
 
 
 

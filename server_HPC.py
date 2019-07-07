@@ -39,6 +39,7 @@ def test_server():
 				index,_,scores = top5_actions.get_top_N_actions()
 
 				Actf = bool(randint(0,1))
+				print(Actf)
 
 				send_results.put(status=(),scores=(*index,*scores),Actf=Actf)
 

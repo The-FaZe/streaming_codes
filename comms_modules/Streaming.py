@@ -160,14 +160,18 @@ class send_frames_thread(threading.Thread):
     The reset threshold it will reset the connection after accumilating to this threshold
     encoding quality of the frames
     """
-    def __init__(self,connection=socket(),reset_threshold=60,encode_quality=90):
+    def __init__(self,connection=socket(),reset_threshold=60,encode_quality=90,w_max=30):
         self.key = True
         self.frames = Segmentation.thrQueue()
         self.connection = connection
         self.encode_quality=encode_quality
         self.reset_threshold=reset_threshold
         self.active_reset = False
+        self.cond_ = threading.RLock()
+        self.latest_spotted_time_measerand = [False,None]
         self.encode_param=[int(IMWRITE_JPEG_QUALITY),encode_quality] # object of the parameters of the encoding (JPEG with 90% quality) 
+        if self.status:  # If the flag is true then initialize the mean object 
+            self.m = Segmentation.mean(w_max)
         threading.Thread.__init__(self)
         self.start()
 
@@ -184,7 +188,15 @@ class send_frames_thread(threading.Thread):
                     self.frames.confirm()
                 else:
                     self.active_reset = False 
-                    Network.send_frame(connection=self.connection,img=self.frames.get(),active_reset=self.active_reset)
+                    x = time()
+                    with self.cond_:
+                        self.latest_spotted_time_measerand=[True,x]
+                    msglen=Network.send_frame(connection=self.connection,img=self.frames.get(),active_reset=self.active_reset)
+                    with self.cond_:
+                        t=time()-x
+                        self.m.mean([msglen,t])
+                        self.latest_spotted_time_measerand[0]=False
+
 
         except(KeyboardInterrupt,IOError,OSError) as e:
             pass
@@ -214,6 +226,15 @@ class send_frames_thread(threading.Thread):
         self.key = False # breaking the while loop of it's still on in the parallel process(run)
         self.frames.close() # declaring there is no frames will be put on the shared queue from the main process
         self.join() # waiting for the parallel process to terminate
+
+    def status(self):
+        with self.cond_:
+            if self.latest_spotted_time_measerand[0]:
+                t=time()-self.latest_spotted_time_measerand[1]
+                out=self.m.mean_temp([0,t])
+            else :
+                out=self.m.mean.out
+        return (1/out[1],out[0]/(out[1]*1000)) 
 
 
 class send_results_thread(threading.Thread):
