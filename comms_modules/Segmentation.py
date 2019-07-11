@@ -149,11 +149,12 @@ class Cap_Thread(threading.Thread):
 class Cap_Process(mp.Process):
     
     def __init__(self,fps_old,fps_new,id_,port,ip="0.0.0.0",reset_threshold=30,encode_quality=90,Tunnel=True,rgb=True,N1=1,N0=0
-        ,hostname=None,username=None,Key_path=None,passphrase=None):
+        ,hostname=None,username=None,Key_path=None,passphrase=None,vframes=6,vflag=False):
         self.frames = mp.Queue(0)
         self.key = mp.Value('b',True)
         self.rgb = rgb
         self.index =decision(fps_old,fps_new)
+        self.fps_new=fps_new
         self.reset_threshold=reset_threshold
         self.encode_quality = encode_quality
         self.id_ =id_
@@ -162,6 +163,8 @@ class Cap_Process(mp.Process):
         self.Tunnel = Tunnel
         self.N1=N1
         self.N0=N0
+        self.vframes=vframes
+        self.vflag=vflag
         self.hostname=hostname
         self.username=username
         self.Key_path=Key_path
@@ -191,7 +194,8 @@ class Cap_Process(mp.Process):
             classInd_file = 'UCF_lists/classInd.txt' #text file name
             top5_actions = Top_N(classInd_file)
 
-            send_frames = Streaming.send_frames_thread(connection=client[0],reset_threshold=self.reset_threshold,encode_quality=self.encode_quality,vframes=4,vflag=True,dimension="224x224")
+            send_frames = Streaming.send_frames_thread(connection=client[0],reset_threshold=self.reset_threshold,
+                encode_quality=self.encode_quality,vframes=self.vframes,vflag=self.vflag,dimension="224x224",fps=str(self.fps_new))
 
             rcv_results = Streaming.rcv_results_thread(connection=client[1])
             score = ();

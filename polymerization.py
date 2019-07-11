@@ -25,11 +25,10 @@ parser.add_argument('dataset', type=str, choices=['ucf101', 'hmdb51', 'kinetics'
 parser.add_argument('weights', nargs='+', type=str,
                     help='1st and 2nd index is RGB and RGBDiff weights respectively')
 parser.add_argument('--arch', type=str, default="BNInception")
-parser.add_argument('--test_segments', type=int, default=25)
-parser.add_argument('--test_crops', type=int, default=1)
+parser.add_argument('--num_segments', type=int, default=8 ,help='Window size')
+parser.add_argument('--delta', type=int, default=2,help='Value of the shift')
+parser.add_argument('--psi', type=float, default=3.5)
 parser.add_argument('--input_size', type=int, default=224)
-parser.add_argument('--crop_fusion_type', type=str, default='avg',
-                    choices=['avg', 'max', 'topk'])
 parser.add_argument('--k', type=int, default=3)
 parser.add_argument('--dropout', type=float, default=0.7)
 parser.add_argument('--classInd_file', type=str, default='')
@@ -38,23 +37,24 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--gpus', nargs='+', type=int, default=None)
 parser.add_argument('--score_weights', nargs='+', type=float, default=[1,1.5])
-parser.add_argument('--psi', type=float, default=10)
 
 
 parser.add_argument('--test',dest = 'test',action='store_true',help='coloring the output scores with red color in case of NoActivity case')
 parser.add_argument('--p',dest= 'port' , type = int , default = 6666)
 parser.add_argument('--h',dest= 'hostname' , type = str , default = 'login01')
+parser.add_argument('--u',dest= 'username' , type = str , default = 'alex039u2')
 
+parser.add_argument('--v',dest = 'vflag',action='store_true')
 args = parser.parse_args()
 
-pre_scoresRGB = torch.zeros((3,101)).cuda()
-pre_scoresRGBDiff = torch.zeros((3,101)).cuda()
+pre_scoresRGB = torch.zeros((args.num_segments - args.delta,101)).cuda()
+pre_scoresRGBDiff = torch.zeros((args.num_segments - args.delta,101)).cuda()
 
 #this function takes one video at a time and outputs the first 5 scores
 def First_step():
   #num_crop = args.test_crops  
-  test_segments = args.test_segments
-  num_crop = args.test_crops
+  num_segments = args.num_segments
+  delta = args.delta
   
   #this function do forward propagation and returns scores
   def eval_video(data, model):
@@ -72,20 +72,21 @@ def First_step():
           if model == 'RGB':
               input = data.view(-1, 3, data.size(1), data.size(2))
               output = torch.cat((pre_scoresRGB, model_RGB(input)))
-              pre_scoresRGB = output.data[-3:,]
+              pre_scoresRGB = output.data[-(args.num_segments - args.delta):,]
 
           elif model == 'RGBDiff':
               input = data.view(-1, 18, data.size(1), data.size(2))
               output = torch.cat((pre_scoresRGBDiff, model_RGBDiff(input)))
-              pre_scoresRGBDiff = output.data[-3:,]
+              pre_scoresRGBDiff = output.data[-(args.num_segments - args.delta):,]
       
-          output_np = output.data.cpu().numpy().copy()    
+          #output_np = output.data.cpu().numpy().copy()    
           #Reshape numpy array to (num_crop,num_segments,num_classes)
-          output_np = output_np.reshape((num_crop, test_segments*2, num_class))
+          #output_np = output_np.reshape((num_crop, test_segments*2, num_class))
           #Take mean of cropped images to be in shape (num_segments,1,num_classes)
-          output_np = output_np.mean(axis=0).reshape((test_segments*2,1,num_class))
-          output_np = output_np.mean(axis=0)
-      return output_np      
+          #output_np = output_np.mean(axis=0).reshape((test_segments*2,1,num_class))
+          #output_np = output_np.mean(axis=0)
+          output_tensor = output.data.mean(dim = 0)
+      return output_tensor      
   
 
   if args.dataset == 'ucf101':
@@ -138,16 +139,16 @@ def First_step():
   softmax = torch.nn.Softmax()
   scores = torch.tensor(np.zeros((1,101)), dtype=torch.float32).cuda()
    
+  action_checker = True
   frames = []  
-  action_checker=True
 
-  conn,transport = set_server(ip="0.0.0.0",port=args.port,Tunnel=True,n_conn=2,hostname= args.hostname)
+  conn,transport = set_server(ip="0.0.0.0",port=args.port,Tunnel=True,n_conn=2,hostname= args.hostname,username=args.username)
   if conn is None:
       return 
   
   try: 
     top5_actions = Top_N(args.classInd_file)
-    rcv_frames = rcv_frames_thread(connection=conn[0])
+    rcv_frames = rcv_frames_thread(connection=conn[0],vflag=args.vflag)
     send_results = send_results_thread(connection=conn[1],test=args.test)
 
     
@@ -169,16 +170,15 @@ def First_step():
         
         frames.append(frame)
       
-        if len(frames) == test_segments*6:       
+        if len(frames) == args.delta*6:       
             frames = transform(frames).cuda()
-            scores_RGB = eval_video(frames[0:len(frames):6], 'RGB')   
+            scores_RGB = eval_video(frames[0:len(frames):6], 'RGB')
             scores_RGBDiff = eval_video(frames[:], 'RGBDiff')
          
             final_scores = args.score_weights[0]*scores_RGB + args.score_weights[1] * scores_RGBDiff
-            #final_scores = softmax(torch.FloatTensor(final_scores))
-            #final_scores = final_scores.data.cpu().numpy().copy()
-            #five_scores = np.argsort(final_scores)[0][::-1][:5]
-            top5_actions.import_scores(final_scores[0,])
+            #final_scores = softmax(final_scores)
+            final_scores = final_scores.data.cpu().numpy().copy()
+            top5_actions.import_scores(final_scores)
             indices_TopN,_,scores_TopN = top5_actions.get_top_N_actions()
             action_checker = Evaluation(scores_TopN, args.psi)
             

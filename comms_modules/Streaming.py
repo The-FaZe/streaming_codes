@@ -83,7 +83,8 @@ class rcv_frames_thread(threading.Thread):
                     else:
                         proc2 = sp.Popen(self.command2, stdin=sp.PIPE, stderr=sp.PIPE,stdout=sp.PIPE,shell=True,bufsize=10**8)
                         stdout=proc2.communicate(frame_)[0]
-                        it = len(stdout)//(220*220*3)
+                        it = len(stdout)//(224*224*3)
+                        print(it)
                         for i in range(it):
                             frame_ =  np.frombuffer(stdout[224*224*3*i:224*224*3*(i+1)], dtype='uint8')
                             frame_=frame_.reshape((224,224,3))
@@ -135,7 +136,7 @@ class rcv_frames_thread(threading.Thread):
 
     #The method is responsible for consuming data from the queue ,decoding it
     # printing status on it and converting it into RGB if desired 
-    def get(self,rgb=False):
+    def get(self,rgb=True):
         """
         The method is responsible for consuming data from the queue ,decoding it
         printing status on it and converting it into RGB if desired using rgb flag
@@ -205,6 +206,7 @@ class send_frames_thread(threading.Thread):
                 '-an',
                 '-c:v', 'libx264',
                 '-preset','slow',
+                '-crf',str(encode_quality),
                 '-f','h264',
                 '-'
                 ]
