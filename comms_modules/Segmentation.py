@@ -191,7 +191,7 @@ class Cap_Process(mp.Process):
             classInd_file = 'UCF_lists/classInd.txt' #text file name
             top5_actions = Top_N(classInd_file)
 
-            send_frames = Streaming.send_frames_thread(connection=client[0],reset_threshold=self.reset_threshold,encode_quality=self.encode_quality)
+            send_frames = Streaming.send_frames_thread(connection=client[0],reset_threshold=self.reset_threshold,encode_quality=self.encode_quality,vframes=4,vflag=True,dimension="224x224")
 
             rcv_results = Streaming.rcv_results_thread(connection=client[1])
             score = ();
@@ -208,14 +208,14 @@ class Cap_Process(mp.Process):
                             send_frames.put(cv2.resize(frame_,(224,224)))
 
 
-                    count,_,score_,NoActf,test,New_out=rcv_results.get()
-                    status=send_frames.status()
+                    count,status,score_,NoActf,test,New_out=rcv_results.get()
+                    _=send_frames.status()
                     if New_out[1]:
                         initialized = True
                         top5_actions.import_indecies_top_N_scores(score_)
-                    #if New_out[0]:
-                    s3 = "the rate of sending frames is {0:.2f} fps".format(status[0])
-                    s4 = "The rate of sending data is {0:.2f} KB/s".format(status[1])
+                    if New_out[0]:
+                        s3 = "the rate of sending frames is {0:.2f} fps".format(status[0])
+                        s4 = "The rate of sending data is {0:.2f} KB/s".format(status[1])
                     s1 = "UP/Down delay {0:1d} frame".format(int(count))
                     #s2 = "The number of waiting frames in buffer is {0:.2f} frame ".format(self.frames.qsize())
                     s5 = "Buffered frames {0:1d} frame".format(int(send_frames.frames.qsize()))
@@ -241,7 +241,10 @@ class Cap_Process(mp.Process):
                     rcv_results.reset()
                     add_status(frame_,s=('Reseting',),x=5,y=y,font=font,thickness=1,lineType=2,fontScale=1.6,fontcolor=(0,0,255),boxcolor=(200,200,200),alpha=alpha,x_mode='center')
                 
-                self.frames.put(frame_)
+                if frame_ is True :
+                    break
+                cv2.imshow('frame',frame_)
+                cv2.waitKey(4)
                 success, frame_ = cam_cap.read()
         except (KeyboardInterrupt,IOError,OSError) as e :
             pass
@@ -334,7 +337,6 @@ def remove_bounderies(frame):
     contours = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
     cnt = contours[0]
     x,y,w,h = cv2.boundingRect(cnt)
-    print(x,y,w,h)
     return frame[y:y+h,x:x+w]
 
 def remove_bounderies1(frame):
@@ -343,7 +345,6 @@ def remove_bounderies1(frame):
     thresh_binary_y_wise = (thresh.sum(1) > 0)
     r_0=(np.logical_xor(thresh_binary_y_wise[1:],thresh_binary_y_wise[0:-1])).nonzero()[0]
     r_0=sorted(r_0,reverse=True)
-    print(r_0)
     if len(r_0) == 0 :
         return frame
     location=list(map(lambda x : (not(thresh_binary_y_wise[0:x].sum()),not(thresh_binary_y_wise[x+1:].sum())) , r_0))# (0,1) top border , (1,0) botom border (1,1) pass
@@ -352,12 +353,9 @@ def remove_bounderies1(frame):
     for index in index_:
         #print(location[index])
         if location[index] == (False,True):
-            print("i'm here")
             frame = frame[0:r_0[index]]
-            print(frame.shape)
         elif location[index] == (True,False):
             frame = frame[r_0[index]:]
-            print(frame.shape)
         else:
             pass
     return frame

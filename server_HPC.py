@@ -3,7 +3,7 @@ from comms_modules.Streaming import rcv_frames_thread,send_results_thread
 from comms_modules.TopN import Top_N
 from numpy.random import random
 from random import randint
-
+import cv2
 def test_server():
 	test = False
 	Tunnel_ = False
@@ -13,7 +13,7 @@ def test_server():
 	try:
 		classInd_file = 'UCF_lists/classInd.txt'
 		top5_actions = Top_N(classInd_file)
-		rcv_frames = rcv_frames_thread(connection=conn[0])
+		rcv_frames = rcv_frames_thread(connection=conn[0],vflag=True)
 		send_results = send_results_thread(connection=conn[1],test=test)
 		c = 0
 		Actf = True 
@@ -22,15 +22,15 @@ def test_server():
 			if rcv_frames.CheckReset():
 				c = 0
 				rcv_frames.ConfirmReset()
-
 			frame,status = rcv_frames.get()
+			cv2.imshow('frame',frame)
+			cv2.waitKey(5)
 
 			if frame is 0:
 				break
 
 			if frame is None:
 				continue
-
 			if c % 10 == 0 and c != 0:
 				scores = random(101)
 
@@ -41,14 +41,14 @@ def test_server():
 				Actf = bool(randint(0,1))
 				print(Actf)
 
-				send_results.put(status=(),scores=(*index,*scores),Actf=Actf)
+				send_results.put(status=status,scores=(*index,*scores),Actf=Actf)
 
 			else:
-				send_results.put(status=(),Actf=Actf)
+				send_results.put(status=status,Actf=Actf)
 
 			c +=1
 	except (KeyboardInterrupt,IOError,OSError) as e:
-		pass
+		raise(e)
 	finally:
 		rcv_frames.close()
 		send_results.close()

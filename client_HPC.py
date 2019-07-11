@@ -45,13 +45,7 @@ def send_test():
 			,hostname=args.hostname,username=args.username,Key_path=Key_path,passphrase=args.passphrase
 			,reset_threshold=args.reset_threshold,encode_quality=args.encode_quality)
 
-		while capture.is_alive():
-
-			frame = capture.get()
-			if frame is True :
-				break
-			imshow('frame',frame)
-			waitKey(4)
+		capture.join()
 	except (KeyboardInterrupt,IOError,OSError)as e:
 		pass
 	finally:
